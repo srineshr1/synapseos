@@ -310,16 +310,25 @@ installed system still boots quietly (`airootfs/etc/default/grub` and
 `modules/grubcfg.conf`).
 
 COSMIC is autostarted on tty1 by `/home/live/.zprofile`, which calls
-`start-cosmic` instead of `exec cosmic-session`. The wrapper tees the session
-output to `~/.cache/synapseos/cosmic-session.log` and returns to the shell when
-the compositor exits non-zero — an exec'd session that dies takes the login
-shell with it, agetty restarts, and all that is left on screen is the motd,
+`synapseos-cosmic` instead of `exec start-cosmic`. That wrapper runs the
+cosmic-session package's own `/usr/bin/start-cosmic` (which is what sets up
+dbus, `XDG_CURRENT_DESKTOP`, the dconf profile and the Qt theme), tees the
+session output to `~/.cache/synapseos/cosmic-session.log` and returns to the
+shell when the compositor exits non-zero — an exec'd session that dies takes the
+login shell with it, agetty restarts, and all that is left on screen is the motd,
 which is indistinguishable from "the ISO just boots to text".
+
+The wrapper must **not** be called `start-cosmic`: since cosmic-session 1.3 that
+path is shipped by the package itself, and `airootfs/usr/bin/start-cosmic` makes
+pacstrap abort the build with
+`cosmic-session: /...\/usr/bin/start-cosmic exists in filesystem`. Upstream's
+script also re-execs itself through `$SHELL` as a login shell, so the autostart
+in `.zprofile` is guarded by `SYNAPSEOS_COSMIC_AUTOSTART` to avoid recursing.
 
 If the desktop does not appear:
 
 ```bash
-start-cosmic          # retry, with the failure printed and logged
+synapseos-cosmic      # retry, with the failure printed and logged
 synapseos-logs        # one file with journal, cosmic log, GPU info, mounts
 journalctl -b -p err --no-pager
 ```

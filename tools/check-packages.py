@@ -22,6 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGES_FILE = ROOT / "archiso/packages.x86_64"
+AIROOTFS = ROOT / "archiso/airootfs"
 LOCAL_REPO = ROOT / "archiso/repo"
 CACHE = Path.home() / ".cache/synapseos-depcheck/db"
 MIRRORLIST = Path("/etc/pacman.d/mirrorlist")
@@ -41,25 +42,25 @@ def mirrors() -> list[str]:
     return servers
 
 
-def fetch_db(repo: str) -> Path:
+def fetch_db(repo: str, ext: str = "db") -> Path:
     CACHE.mkdir(parents=True, exist_ok=True)
-    dest = CACHE / f"{repo}.db"
+    dest = CACHE / f"{repo}.{ext}"
     if dest.exists():
         return dest
     errors = []
     for server in mirrors():
-        url = server.replace("$repo", repo).replace("$arch", "x86_64") + f"/{repo}.db"
+        url = server.replace("$repo", repo).replace("$arch", "x86_64") + f"/{repo}.{ext}"
         try:
             request = urllib.request.Request(url, headers={"User-Agent": "pacman/7"})
-            with urllib.request.urlopen(request, timeout=60) as r:
+            with urllib.request.urlopen(request, timeout=120) as r:
                 data = r.read()
         except Exception as exc:  # try the next mirror
             errors.append(f"{url}: {exc}")
             continue
         dest.write_bytes(data)
-        print(f"  fetched {repo}.db from {server.split('/$')[0]} ({len(data) / 1e6:.1f} MB)")
+        print(f"  fetched {repo}.{ext} from {server.split('/$')[0]} ({len(data) / 1e6:.1f} MB)")
         return dest
-    raise SystemExit("could not download {}.db:\n  ".format(repo) + "\n  ".join(errors))
+    raise SystemExit("could not download {}.{}:\n  ".format(repo, ext) + "\n  ".join(errors))
 
 
 def parse_db(path: Path, repo: str, index: dict, provides: dict, groups: dict) -> None:
@@ -83,6 +84,7 @@ def parse_db(path: Path, repo: str, index: dict, provides: dict, groups: dict) -
             entry = {
                 "name": name,
                 "repo": repo,
+                "filename": fields.get("FILENAME", [""])[0],
                 "version": fields.get("VERSION", [""])[0],
                 "depends": fields.get("DEPENDS", []),
                 "conflicts": fields.get("CONFLICTS", []),
@@ -111,6 +113,96 @@ def version_matches(version: str, op: str, target: str) -> bool:
         ">=": result >= 0,
         ">": result > 0,
     }[op]
+
+
+def backup_files(entry: dict) -> set[str] | None:
+    """The package's `backup` array, or None if it could not be determined.
+
+    pacman does not treat a pre-existing file as a conflict when the incoming
+    package lists it as a backup file (that is how archiso can ship /etc/passwd
+    and /etc/default/grub). The sync databases do not carry the backup array, so
+    read it out of the package's .PKGINFO - the first member of the archive,
+    which makes a 128 KiB range request enough.
+    """
+    local = sorted(Path("/var/lib/pacman/local").glob(f"{entry['name']}-*/files"))
+    for candidate in local:
+        text = candidate.read_text(errors="replace")
+        if "%BACKUP%" in text:
+            section = text.split("%BACKUP%", 1)[1].split("%", 1)[0]
+            return {line.split("\t")[0] for line in section.split() if line}
+        return set()
+
+    filename = entry.get("filename")
+    if not filename:
+        return None
+    for server in mirrors():
+        url = server.replace("$repo", entry["repo"]).replace("$arch", "x86_64") + f"/{filename}"
+        try:
+            request = urllib.request.Request(
+                url, headers={"User-Agent": "pacman/7", "Range": "bytes=0-131071"}
+            )
+            with urllib.request.urlopen(request, timeout=60) as r:
+                head = r.read(131072)
+        except Exception:
+            continue
+        # bsdtar exits non-zero on the truncated tail; .PKGINFO comes first.
+        result = subprocess.run(
+            ["bsdtar", "-xOf", "-", ".PKGINFO"], input=head, capture_output=True
+        )
+        info = result.stdout.decode(errors="replace")
+        if "pkgname" not in info:
+            continue
+        return {
+            line.split("=", 1)[1].strip()
+            for line in info.splitlines()
+            if line.startswith("backup")
+        }
+    return None
+
+
+def airootfs_paths() -> dict[str, Path]:
+    """Every regular file the profile overlays onto the root filesystem.
+
+    Keys are package-database style paths (no leading slash), which is what the
+    *.files databases contain.
+    """
+    result = {}
+    if not AIROOTFS.is_dir():
+        return result
+    for path in AIROOTFS.rglob("*"):
+        if path.is_file() or path.is_symlink():
+            result[str(path.relative_to(AIROOTFS))] = path
+    return result
+
+
+def file_owners(paths: set[str], selected: set[str]) -> dict[str, list[str]]:
+    """Map each path to the selected packages that also ship it.
+
+    mkarchiso copies airootfs/ into the pacstrap dir *before* running pacstrap,
+    so any path that a package owns makes pacman abort the whole build with
+    "<pkg>: /path exists in filesystem". Only packages that are actually being
+    installed matter, hence the `selected` filter.
+    """
+    owners: dict[str, list[str]] = {}
+    for repo in REPOS:
+        db = fetch_db(repo, "files")
+        with tarfile.open(db) as tar:
+            for member in tar:
+                if not member.name.endswith("/files"):
+                    continue
+                pkgdir = member.name.rsplit("/", 1)[0]
+                name = pkgdir.rsplit("-", 2)[0]
+                if name not in selected:
+                    continue
+                handle = tar.extractfile(member)
+                if handle is None:
+                    continue
+                for raw in handle.read().decode(errors="replace").splitlines():
+                    if raw.startswith("%") or not raw or raw.endswith("/"):
+                        continue
+                    if raw in paths:
+                        owners.setdefault(raw, []).append(name)
+    return owners
 
 
 def read_package_list() -> list[str]:
@@ -193,6 +285,26 @@ def main() -> int:
     print(f"with dependencies: {len(selected)}")
     print(f"installed size   : {total / 1e9:.2f} GB")
 
+    # Files the profile overlays that a to-be-installed package also owns.
+    overlay = airootfs_paths()
+    print(f"\nChecking {len(overlay)} airootfs files against the package file lists...")
+    candidates = file_owners(set(overlay), set(selected))
+
+    # A path both sides ship is only fatal when the package does not list it as
+    # a backup file.
+    file_clashes: dict[str, list[str]] = {}
+    unverified: dict[str, list[str]] = {}
+    backups: dict[str, set[str] | None] = {}
+    for path, pkgs in candidates.items():
+        for pkg in sorted(set(pkgs)):
+            if pkg not in backups:
+                backups[pkg] = backup_files(selected[pkg])
+            listed = backups[pkg]
+            if listed is None:
+                unverified.setdefault(path, []).append(pkg)
+            elif path not in listed:
+                file_clashes.setdefault(path, []).append(pkg)
+
     ok = True
     if unknown:
         ok = False
@@ -209,6 +321,17 @@ def main() -> int:
         print(f"\nCONFLICTS ({len(clashes)}):")
         for a, b in sorted({tuple(sorted(c)) for c in clashes}):
             print(f"  {a} <-> {b}")
+    if file_clashes:
+        ok = False
+        print(f"\nFILE CONFLICTS WITH airootfs/ ({len(file_clashes)}):")
+        for path, pkgs in sorted(file_clashes.items()):
+            print(f"  /{path} is also shipped by {', '.join(sorted(set(pkgs)))}")
+        print("  pacstrap aborts with '<pkg>: /path exists in filesystem'.")
+        print("  Rename the profile's copy or drop the package.")
+    if unverified:
+        print(f"\nairootfs files shared with a package, backup array unknown ({len(unverified)}):")
+        for path, pkgs in sorted(unverified.items()):
+            print(f"  /{path} <- {', '.join(sorted(set(pkgs)))}")
 
     print("\nOK: pacstrap should resolve this package list." if ok else "\nFAILED")
     return 0 if ok else 1

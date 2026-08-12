@@ -10,16 +10,21 @@ printf '%%wheel ALL=(ALL:ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/10-live
 chmod 440 /etc/sudoers.d/10-live
 
 # Auto-start the COSMIC session on the live user's first login.
-# start-cosmic logs the session to ~/.cache/synapseos/cosmic-session.log and
-# returns to the shell on failure instead of exec'ing, so a compositor that dies
-# leaves a diagnosable console rather than a getty restart loop.
+# synapseos-cosmic wraps the cosmic-session package's own /usr/bin/start-cosmic,
+# logs to ~/.cache/synapseos/cosmic-session.log and returns to the shell on
+# failure instead of exec'ing, so a compositor that dies leaves a diagnosable
+# console rather than a getty restart loop. SYNAPSEOS_COSMIC_AUTOSTART guards
+# against recursion: start-cosmic re-execs itself through a login shell, which
+# sources this file again.
 cat > /home/live/.zprofile << 'EOF'
-if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DISPLAY:-}" ] && [ "$(tty)" = "/dev/tty1" ]; then
+if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DISPLAY:-}" ] && [ "$(tty)" = "/dev/tty1" ] &&
+   [ -z "${SYNAPSEOS_COSMIC_AUTOSTART:-}" ]; then
     if grep -qw nodesktop /proc/cmdline; then
         printf '\nnodesktop on the kernel command line: COSMIC was not started.\n'
-        printf 'Start it with:  start-cosmic     Collect diagnostics:  synapseos-logs\n\n'
+        printf 'Start it with:  synapseos-cosmic     Collect diagnostics:  synapseos-logs\n\n'
     else
-        start-cosmic
+        export SYNAPSEOS_COSMIC_AUTOSTART=1
+        synapseos-cosmic
     fi
 fi
 EOF

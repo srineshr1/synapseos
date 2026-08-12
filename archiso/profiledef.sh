@@ -25,7 +25,7 @@ file_permissions=(
   ["/usr/local/bin/livecd-sound"]="0:0:755"
   ["/usr/bin/synapseos-installer"]="0:0:755"
   ["/usr/bin/synapseos-logs"]="0:0:755"
-  ["/usr/bin/start-cosmic"]="0:0:755"
+  ["/usr/bin/synapseos-cosmic"]="0:0:755"
   ["/usr/share/synapseos/prepare.sh"]="0:0:755"
   ["/usr/share/synapseos/postinstall.sh"]="0:0:755"
 )

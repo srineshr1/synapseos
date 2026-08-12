@@ -7,7 +7,7 @@
 To install:  click "Install SynapseOS" in the app launcher, or run:
     synapseos-installer
 
-No desktop?  start-cosmic          starts COSMIC and logs it
+No desktop?  synapseos-cosmic      starts COSMIC and logs it
              synapseos-logs        collects everything into one file
              journalctl -b -p err  errors from this boot
 
