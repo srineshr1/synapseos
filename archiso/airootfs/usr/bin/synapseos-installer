@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Launch Calamares as root from the live COSMIC session.
+#
+# `sudo calamares` does not work here: sudo resets the environment, so the
+# installer starts with no WAYLAND_DISPLAY/XDG_RUNTIME_DIR, fails to connect to
+# a display and exits immediately - which looks exactly like "clicking the
+# installer does nothing". Pass the session variables through explicitly.
+set -euo pipefail
+
+if [ "$(id -u)" -eq 0 ]; then
+    exec calamares "$@"
+fi
+
+# Prefer native Wayland, fall back to XWayland if the plugin is unavailable.
+: "${QT_QPA_PLATFORM:=wayland;xcb}"
+export QT_QPA_PLATFORM
+
+env_args=()
+for var in WAYLAND_DISPLAY XDG_RUNTIME_DIR XDG_SESSION_TYPE XDG_CURRENT_DESKTOP \
+           DISPLAY XAUTHORITY QT_QPA_PLATFORM QT_SCALE_FACTOR LANG LC_ALL; do
+    if [ -n "${!var:-}" ]; then
+        env_args+=("${var}=${!var}")
+    fi
+done
+
+exec sudo -- env "${env_args[@]}" calamares "$@"

@@ -1,0 +1,23 @@
+# Build output: multi-gigabyte ISOs never belong in git.
+out/
+work/
+*.iso
+*.iso.prev
+*.iso.sha512
+*.iso.sig
+
+# Staged packages for the local [synapseos-local] repo. These are rebuilt with
+# tools/build-aur.sh; some are larger than GitHub's 100 MB per-file limit.
+archiso/repo/*.pkg.tar.zst
+archiso/repo/*.db*
+archiso/repo/*.files*
+
+# makepkg leftovers next to vendored PKGBUILDs
+packaging/*/src/
+packaging/*/pkg/
+packaging/*/*.tar.gz
+packaging/*/*.tar.xz
+packaging/*/*.pkg.tar.zst
+
+__pycache__/
+*.pyc

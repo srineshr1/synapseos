@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Collect everything needed to debug a failed live boot / desktop / install into
+# one file, and copy it to a writable USB stick if one is given.
+#
+#   synapseos-logs                  # writes ~/synapseos-logs-<host>-<date>.txt
+#   synapseos-logs /run/media/live/MYSTICK
+#
+# The live journal is volatile (Storage=volatile), so it lives in RAM only:
+# collect it before rebooting or it is gone.
+set -uo pipefail
+
+dest_dir="${1:-$HOME}"
+out="$dest_dir/synapseos-logs-$(hostname)-$(date +%Y%m%d-%H%M%S).txt"
+
+section() { printf '\n\n===== %s =====\n' "$1"; }
+have() { command -v "$1" > /dev/null 2>&1; }
+
+{
+    echo "SynapseOS diagnostics"
+    echo "date:    $(date -Is)"
+    echo "kernel:  $(uname -srm)"
+    echo "cmdline: $(cat /proc/cmdline)"
+
+    section "ISO / release"
+    cat /etc/os-release 2> /dev/null
+    cat /run/archiso/bootmnt/*/version 2> /dev/null
+
+    section "failed units"
+    systemctl --no-pager --failed
+    section "failed user units"
+    systemctl --user --no-pager --failed 2> /dev/null
+
+    section "journal, current boot (priority warning and above)"
+    journalctl -b -p warning --no-pager 2> /dev/null
+
+    section "journal, current boot (full)"
+    journalctl -b --no-pager 2> /dev/null
+
+    section "cosmic-session log"
+    cat "${XDG_CACHE_HOME:-$HOME/.cache}/synapseos/cosmic-session.log" 2> /dev/null \
+        || echo "(no cosmic-session log - the desktop was never started from tty1)"
+
+    section "calamares log"
+    cat "$HOME/.cache/calamares/session.log" 2> /dev/null \
+        || echo "(no calamares log - the installer has not been run)"
+
+    section "graphics"
+    have lspci && lspci -nnk | grep -A3 -Ei 'vga|3d|display'
+    ls -l /dev/dri 2> /dev/null || echo "(no /dev/dri - no KMS driver bound)"
+    have loginctl && loginctl list-seats
+    have loginctl && loginctl list-sessions
+
+    section "dmesg: drm / firmware / acpi errors"
+    dmesg 2> /dev/null | grep -Ei 'drm|firmware|error|fail' | tail -n 200
+
+    section "block devices"
+    lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINTS
+    section "mounts"
+    findmnt -no TARGET,SOURCE,FSTYPE,OPTIONS
+    section "memory"
+    free -h
+    section "network"
+    have nmcli && nmcli -t device status
+} > "$out" 2>&1
+
+sync
+echo "wrote $out ($(du -h "$out" | cut -f1))"
+echo
+echo "To get it off this machine, plug in a USB stick and re-run:"
+echo "    synapseos-logs /run/media/live/<STICK>"

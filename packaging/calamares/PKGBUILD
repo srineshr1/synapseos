@@ -1,0 +1,118 @@
+# Vendored for the SynapseOS local [synapseos-local] repo — calamares is not in
+# the official Arch repositories.
+#
+# Build with:  ./tools/build-aur.sh calamares
+# Unlike the other staged packages this one is compiled, so its makedepends do
+# have to be installed on the build host.
+#
+# NOTE: the kcrash dependency below was missing from the package that is
+# currently staged in archiso/repo/, which is why packages.x86_64 also lists
+# kcrash explicitly. Keep both until the package is rebuilt from this recipe.
+# Contributor: Rustmilian Rustmilian@proton.me
+
+_pkgname="calamares"
+pkgname="$_pkgname"
+pkgver=3.4.2
+pkgrel=4
+pkgdesc="Distribution-independent installer framework"
+url="https://codeberg.org/Calamares/calamares"
+license=("GPL-3.0-or-later")
+arch=('i686' 'x86_64')
+
+depends=(
+  'kcoreaddons'
+  'kcrash' # /usr/bin/calamares links libKF6Crash.so.6
+  'kpmcore'
+  'libpwquality'
+  'python' # linked into libcalamares (must match live ISO Python soname)
+  'qt6-declarative'
+  'qt6-svg'
+  'yaml-cpp'
+)
+makedepends=(
+  'boost'
+  'extra-cmake-modules'
+  'libglvnd'
+  'ninja'
+  'python'
+  'qt6-tools'
+  'qt6-translations'
+)
+
+_pkgext="tar.gz"
+source=("$_pkgname-$pkgver.$_pkgext"::"$url/releases/download/v$pkgver/$_pkgname-$pkgver.$_pkgext")
+sha256sums=('733bbbb00dc9f84874bd5c22960952f317ea2537565431179fa2152b2fbfdccc')
+
+build() {
+  local _skip_modules=(
+    dracut
+    dracutlukscfg
+    dummycpp
+    dummyprocess
+    dummypython
+    dummypythonqt
+    initramfs
+    initramfscfg
+    interactiveterminal
+    packagechooser
+    packagechooserq
+    services-openrc
+  )
+
+  # Correct source directory (inside src/)
+  local _pkgsrc_dir="$srcdir/$_pkgname-$pkgver"
+
+  # Force system Python (never ~/.local python3.11 — that broke live ISO libpython soname)
+  local _py=/usr/bin/python3
+  [[ -x $_py ]] || _py=/usr/bin/python
+  echo "==> Building Calamares against: $($_py --version 2>&1) ($_py)"
+
+  local _cmake_options=(
+    -B build
+    -S "$_pkgsrc_dir"
+    -G Ninja
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_PREFIX='/usr'
+    -DCMAKE_INSTALL_LIBDIR='lib'
+    -DWITH_QT6=ON
+    -DINSTALL_CONFIG=ON
+    -DSKIP_MODULES="${_skip_modules[*]}"
+    -DBUILD_TESTING=OFF
+
+    -DPython_EXECUTABLE="$_py"
+    -DPython3_EXECUTABLE="$_py"
+    -DPython_FIND_VIRTUALENV=STANDARD
+    -DPython3_FIND_VIRTUALENV=STANDARD
+    -DPython_FIND_STRATEGY=LOCATION
+    -DPython3_FIND_STRATEGY=LOCATION
+    -DPython_ROOT_DIR=/usr
+    -DPython3_ROOT_DIR=/usr
+
+    # Explicit KDE install dirs to suppress warnings
+    -DKDE_INSTALL_BINDIR=/usr/bin
+    -DKDE_INSTALL_SBINDIR=/usr/sbin
+    -DKDE_INSTALL_LIBDIR=/usr/lib
+    -DKDE_INSTALL_LIBEXECDIR=/usr/libexec
+    -DKDE_INSTALL_INCLUDEDIR=/usr/include
+    -DKDE_INSTALL_LOCALSTATEDIR=/var
+    -DKDE_INSTALL_SHAREDSTATEDIR=/usr/share
+    -DKDE_INSTALL_DATAROOTDIR=/usr/share
+    -DKDE_INSTALL_DATADIR=/usr/share
+    -DKDE_INSTALL_LOCALEDIR=/usr/share/locale
+    -DKDE_INSTALL_MANDIR=/usr/share/man
+    -DKDE_INSTALL_INFODIR=/usr/share/info
+    -DKDE_INSTALL_SYSCONFDIR=/etc
+
+    -Wno-dev
+  )
+
+  # Hide user-local Python from CMake discovery during this build
+  env -u PYTHONHOME \
+    PATH="/usr/bin:/usr/local/bin:/bin" \
+    cmake "${_cmake_options[@]}"
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

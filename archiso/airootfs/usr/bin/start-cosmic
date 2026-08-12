@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Start the COSMIC session and keep a readable log of it.
+#
+# The live session autostarts this from /home/live/.zprofile on tty1. It is a
+# script and not a bare `exec cosmic-session` on purpose: when the compositor
+# fails to start (no DRM device, no seat, GPU driver missing) an exec'd session
+# takes the login shell down with it, agetty restarts, and the only thing left
+# on screen is the motd - which is exactly the "it boots to a text screen"
+# symptom with no explanation. Here the output is teed to a file and the last
+# lines are printed, then control returns to the shell.
+set -uo pipefail
+
+LOG_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/synapseos"
+LOG="$LOG_DIR/cosmic-session.log"
+mkdir -p "$LOG_DIR"
+
+{
+    echo "=== cosmic-session start: $(date -Is) ==="
+    echo "tty=$(tty) user=$(id -un) seat=${XDG_SEAT:-unset} vtnr=${XDG_VTNR:-unset}"
+    echo "cmdline: $(cat /proc/cmdline)"
+    echo "drm devices: $(ls /dev/dri 2>/dev/null | tr '\n' ' ')"
+} >> "$LOG"
+
+cosmic-session 2>&1 | tee -a "$LOG"
+status=${PIPESTATUS[0]}
+
+echo "=== cosmic-session exited with status $status: $(date -Is) ===" >> "$LOG"
+
+if (( status != 0 )); then
+    printf '\n'
+    echo "COSMIC session failed to start (exit $status)."
+    echo "Last lines of $LOG:"
+    tail -n 25 "$LOG"
+    printf '\n'
+    echo "Full log:        $LOG"
+    echo "Boot messages:   journalctl -b --no-pager"
+    echo "Collect all:     synapseos-logs"
+    echo "Retry manually:  start-cosmic"
+fi
+
+exit "$status"

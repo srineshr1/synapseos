@@ -1,0 +1,15 @@
+.'  _.  .'  .'| SynapseOS live medium - Arch Linux + COSMIC desktop
+ |   |  |   |   | https://github.com/SynapseOs
+  '._|  '._|  .'| Launch the installer:  Install SynapseOS
+      |      .'  Login:  live / live (passwordless sudo)
+      |  ..`
+
+To install:  click "Install SynapseOS" in the app launcher, or run:
+    synapseos-installer
+
+No desktop?  start-cosmic          starts COSMIC and logs it
+             synapseos-logs        collects everything into one file
+             journalctl -b -p err  errors from this boot
+
+Logs:  desktop    ~/.cache/synapseos/cosmic-session.log
+       installer  ~/.cache/calamares/session.log

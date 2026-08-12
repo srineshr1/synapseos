@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Install SynapseOS
+GenericName=Installer
+Comment=Install SynapseOS to your computer
+Exec=/usr/bin/synapseos-installer
+TryExec=/usr/bin/synapseos-installer
+Icon=/usr/share/pixmaps/synapseos-installer.png
+Terminal=false
+Type=Application
+StartupNotify=true
+Categories=System;Settings;
+Keywords=install;setup;synapseos;calamares;

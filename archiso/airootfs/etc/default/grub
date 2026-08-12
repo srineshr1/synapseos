@@ -1,0 +1,18 @@
+# Defaults for the *installed* system. The live medium's boot menu is not built
+# from this file (see archiso/grub/ and archiso/syslinux/), so values here are
+# chosen for a normal disk boot. Calamares' grubcfg module updates
+# GRUB_DISTRIBUTOR and the kernel command line during installation.
+GRUB_DEFAULT="saved"
+GRUB_TIMEOUT=5
+GRUB_TIMEOUT_STYLE="menu"
+GRUB_DISTRIBUTOR="SynapseOS"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet loglevel=3"
+GRUB_CMDLINE_LINUX=""
+GRUB_PRELOAD_MODULES="part_gpt part_msdos"
+GRUB_TERMINAL_INPUT="console"
+GRUB_TERMINAL_OUTPUT="console"
+GRUB_GFXMODE="auto"
+GRUB_GFXPAYLOAD_LINUX="keep"
+GRUB_COLOR_NORMAL="light-gray/black"
+GRUB_COLOR_HIGHLIGHT="light-cyan/black"
+GRUB_DISABLE_RECOVERY="true"
