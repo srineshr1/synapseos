@@ -1,6 +1,7 @@
 # SynapseOS
 
-An Arch Linux based distribution built around the COSMIC desktop (System76).
+An Arch Linux based distribution with a compact Catppuccin Macchiato
+Plasma desktop.
 
 ## Project layout
 
@@ -24,6 +25,8 @@ SynapseOs/
 ├── tools/build-aur.sh                # builds AUR packages into archiso/repo/
 ├── tools/check-packages.py           # pre-flight: resolves packages.x86_64
 ├── tools/live-hotfix-kernel.sh       # live-session workaround for pre-fix ISOs
+├── tools/install-catppuccin-plasma.sh # re-vendors Macchiato into airootfs
+├── tools/live-hotfix-desktop.sh      # live-session Plasma / SSH_AUTH_SOCK fix
 ├── build.sh                          # builds the ISO (needs root): ./build.sh
 └── out/                              # built ISO + checksum
 ```
@@ -35,7 +38,7 @@ live filesystem, in the installed system too.
 
 | Area        | Packages                                                                 |
 | ----------- | ------------------------------------------------------------------------ |
-| Desktop     | COSMIC, firefox, helium-browser, pipewire                                |
+| Desktop     | Plasma 6 (Catppuccin Macchiato), firefox, helium-browser, pipewire       |
 | C / C++     | base-devel (gcc), clang, llvm, lld, gdb, lldb, valgrind, cmake, ninja, meson |
 | Java        | jdk-openjdk, maven, gradle                                               |
 | Go          | go, gopls                                                                |
@@ -46,9 +49,46 @@ live filesystem, in the installed system too.
 | Git         | git, git-lfs, git-delta, lazygit, github-cli                             |
 | Editors     | code (Code - OSS), neovim, helix                                         |
 | Containers  | docker, docker-compose, docker-buildx                                    |
+| Assistant   | Super+S overlay, `synapse-core` user service, `synapsectl`, OS MCP (`synapseos-mcp`) |
 | AI agents   | claude-code (`claude`), openai-codex-bin (`codex`), opencode-bin (`opencode`) |
 | AUR helper  | paru                                                                     |
 | CLI         | ripgrep, fd, fzf, jq, yq, bat, eza, just, tokei, hyperfine, httpie, shellcheck, 7zip |
+
+### Synapse assistant
+
+Press **Super+S** (or run `synapseos-overlay`) for a Macchiato overlay that
+does what you say: open apps, navigate the browser, list what is running and
+for how long, throttle or kill a runaway process. The model never talks to
+`/proc` itself. It calls typed tools on a local MCP server.
+
+```
+synapse-core.service   # user systemd, starts with the graphical session
+synapseos-overlay      # Super+S
+synapsectl ask "…"     # same brain, no GUI
+synapsectl apps        # running apps + elapsed time
+synapsectl proc
+synapseos-mcp          # stdio MCP for claude / codex / opencode
+```
+
+The core is unprivileged. Launch / focus / open-URL run immediately in the
+default **assist** mode. Kill, throttle, close and `shell_run` ask first.
+PID 1, KWin, plasmashell and the core itself cannot be killed. Ctrl+Alt+S
+is the kill switch.
+
+The planner and the mic use SpaceXAI (`XAI_API_KEY` or `synapsectl key set`).
+Without a key the overlay still lists local state; it will not pretend a
+cloud call succeeded.
+
+```bash
+# Attach a preinstalled coding agent to the OS tool server
+claude mcp add synapseos -- synapseos-mcp
+
+# From a git checkout, against the session you are in now:
+./tools/run-synapseos.sh core
+./tools/run-synapseos.sh overlay
+./tools/run-synapseos.sh ctl apps
+./tools/run-synapseos.sh test
+```
 
 Notes:
 
@@ -100,6 +140,8 @@ git clone https://github.com/srineshr1/synapseos.git && cd synapseos
 ./tools/build-aur.sh calamares    # the installer itself (compiles)
 python3 tools/check-packages.py   # pre-flight the package list
 ./build.sh                        # needs root
+# Catppuccin Macchiato is already in airootfs. Re-fetch with:
+#   ./tools/install-catppuccin-plasma.sh
 ```
 
 `build.sh` rewrites the `[synapseos-local]` server path in
@@ -163,7 +205,9 @@ archiso 88; the `uefi-x64.grub.esp`-style names are deprecated stubs that fail.
 
 ## Installing
 
-Boot the ISO → COSMIC desktop appears → launch **Install SynapseOS**.
+Boot the ISO → Plasma appears (floating Macchiato panel) → **Install SynapseOS**
+opens on its own (xdg-autostart). If it does not, launch it from the app
+menu or run `synapseos-installer`.
 
 Calamares copies the live rootfs to disk (offline), then, in order: partitions
 and formats the disk, unpacks the squashfs, writes locale/keymap/fstab, fixes
@@ -245,24 +289,44 @@ sudo ./tools/live-hotfix-kernel.sh   # then launch the installer again
 The script only edits `/etc/calamares/modules/{mount,shellprocess-prepare}.conf`
 on the live overlay (originals kept as `*.orig`) and is idempotent.
 
+### Desktop dies when you minimise a window or open an app
+
+That is `cosmic-comp` crashing; the `SSH_AUTH_SOCK not set` line on the
+console is leftover `start-cosmic` output on tty1, not the cause. On an ISO
+built before the compositor workarounds, copy this checkout into the live
+session (shared folder, scp, USB) and run:
+
+```bash
+sudo ./tools/live-hotfix-desktop.sh   # then log out of COSMIC, or reboot
+```
+
+It installs `/etc/profile.d/synapseos-{graphics,ssh-agent}.sh`,
+`synapseos-safe-graphics`, and the PAM/gcr bits. After a session restart the
+minimise crash should stop. If it does not, `sudo synapseos-safe-graphics on`
+and log out again.
+
 ## Customizing
 
 | What you want to change        | Where to edit                                                              |
 | ------------------------------ | -------------------------------------------------------------------------- |
-| Apps in the ISOLive etc       | `archiso/packages.x86_64` (e.g. add `code`, `steam`, ...)                  |
+| OS assistant (overlay, MCP)    | `archiso/airootfs/usr/lib/synapseos/` + `usr/bin/synapseos-*` / `synapsectl` |
+| Apps in the ISO / live etc     | `archiso/packages.x86_64` (e.g. add `code`, `steam`, ...)                  |
 | ISO name / label / version     | `archiso/profiledef.sh`                                                    |
 | System files in live + target  | files under `archiso/airootfs/etc/...` (they land in /etc of every image)  |
-| Defaults for new desktop users | `archiso/airootfs/etc/skel/` (COSMIC settings, dotfiles)                   |
-| Wallpapers                     | ship them under `airootfs/usr/share/backgrounds/` and set in skel config   |
+| Defaults for new desktop users | `archiso/airootfs/etc/skel/` (Plasma + Catppuccin Macchiato)                |
+| Wallpapers                     | `/usr/share/backgrounds/synapseos/desktop.png` + Plasma appletsrc           |
+| Catppuccin theme files         | `tools/install-catppuccin-plasma.sh`                                        |
 | Build-time rootfs steps        | `archiso/airootfs/root/customize_airootfs.sh`                              |
 | Pre-initramfs install step     | `archiso/airootfs/usr/share/synapseos/prepare.sh`                          |
 | Installed-system cleanup       | `archiso/airootfs/usr/share/synapseos/postinstall.sh`                      |
 | Installer wizard behavior      | `archiso/airootfs/etc/calamares/modules/*.conf` and `settings.conf`        |
 | Installer art + slideshow      | `tools/gen-branding.py`, then `archiso/.../branding/synapseos/`             |
+| Desktop crash on minimise      | `airootfs/etc/profile.d/synapseos-graphics.sh` + `synapseos-safe-graphics` |
+| `SSH_AUTH_SOCK not set` flash  | `airootfs/etc/profile.d/synapseos-ssh-agent.sh` (harmless; tty leftover)   |
 | GRUB defaults of installed sys | `archiso/airootfs/etc/default/grub` (+ `modules/grubcfg.conf`)             |
-| GRUB menu look / entries       | `archiso/grub/` (splash.png, grub.cfg)                                     |
+| GRUB menu look / entries       | `archiso/grub/` (`theme/` + grub.cfg; art from `tools/gen-branding.py`)    |
 | systemd-boot (UEFI)            | `archiso/efiboot/`                                                         |
-| BIOS boot menu                 | `archiso/syslinux/` (splash.png must be 640x480 8-bit PNG)                 |
+| BIOS boot menu                 | `archiso/syslinux/` (640x480 8-bit splash.png from `tools/gen-branding.py`) |
 
 Key COSMIC default state lives in the user config database:
 
@@ -275,6 +339,12 @@ session, copy the resulting `~/.config/cosmic/` tree into
 `airootfs/etc/skel/.config/cosmic/`, and rebuild.
 
 Live-shell credentials: user `live` / password `live` (passwordless sudo).
+
+COSMIC Initial Setup (theme, layout, keyboard, …) is skipped on the live
+user: `customize_airootfs.sh` writes `~/.config/cosmic-initial-setup-done`.
+That file is not in `/etc/skel`, so the account Calamares creates still gets
+the wizard on first login after install. The `rescue` account is marked done
+too, so a recovery login does not run it.
 
 ## Recovery account on the installed system
 
@@ -309,27 +379,17 @@ vt.global_cursor_default=0` now lives only on the extra "quiet boot" entry in
 installed system still boots quietly (`airootfs/etc/default/grub` and
 `modules/grubcfg.conf`).
 
-COSMIC is autostarted on tty1 by `/home/live/.zprofile`, which calls
-`synapseos-cosmic` instead of `exec start-cosmic`. That wrapper runs the
-cosmic-session package's own `/usr/bin/start-cosmic` (which is what sets up
-dbus, `XDG_CURRENT_DESKTOP`, the dconf profile and the Qt theme), tees the
-session output to `~/.cache/synapseos/cosmic-session.log` and returns to the
+Plasma is autostarted on tty1 by `/home/live/.zprofile`, which calls
+`synapseos-plasma`. That wrapper runs `startplasma-wayland`, tees the
+session output to `~/.cache/synapseos/plasma-session.log` and returns to the
 shell when the compositor exits non-zero — an exec'd session that dies takes the
-login shell with it, agetty restarts, and all that is left on screen is the motd,
-which is indistinguishable from "the ISO just boots to text".
-
-The wrapper must **not** be called `start-cosmic`: since cosmic-session 1.3 that
-path is shipped by the package itself, and `airootfs/usr/bin/start-cosmic` makes
-pacstrap abort the build with
-`cosmic-session: /...\/usr/bin/start-cosmic exists in filesystem`. Upstream's
-script also re-execs itself through `$SHELL` as a login shell, so the autostart
-in `.zprofile` is guarded by `SYNAPSEOS_COSMIC_AUTOSTART` to avoid recursing.
+login shell with it, agetty restarts, and all that is left on screen is the motd.
 
 If the desktop does not appear:
 
 ```bash
-synapseos-cosmic      # retry, with the failure printed and logged
-synapseos-logs        # one file with journal, cosmic log, GPU info, mounts
+synapseos-plasma      # retry, with the failure printed and logged
+synapseos-logs        # one file with journal, plasma log, GPU info, mounts
 journalctl -b -p err --no-pager
 ```
 
@@ -338,7 +398,70 @@ to `DIR`, so pass a mounted USB stick to get it off the machine. The live
 journal is `Storage=volatile`, i.e. RAM only — collect it before rebooting.
 
 Booting with `nodesktop` on the kernel command line (the "console only" menu
-entry) skips the COSMIC autostart and leaves a plain shell for debugging.
+entry) skips the Plasma autostart and leaves a plain shell for debugging.
+
+### The desktop fails to start in a VM
+
+Blur (windows, menus, Kickoff) needs OpenGL plus Better Blur DX
+(`kwin-effects-better-blur-dx` in `archiso/repo/`). Rebuild that package
+after a kwin upgrade (`./tools/build-aur.sh kwin-effects-better-blur-dx`).
+Software composition (`KWIN_COMPOSE=Q`) cannot blur — it is opt-in via the
+**safe graphics** boot entry (`safegfx`) or:
+
+```bash
+sudo synapseos-safe-graphics on      # or: off, auto, status
+```
+
+Then log out and back in. `cosmicsafe` on the kernel command line is still
+accepted as an alias.
+
+VirtualBox: graphics controller **VMSVGA**, **3D acceleration on**, 128 MB
+of VRAM. Without 3D, KWin falls back to software GL (slow blur) or fails
+and you boot **safe graphics** instead.
+
+`virtualbox-guest-utils` replaces archiso's `virtualbox-guest-utils-nox` in the
+package list, which adds `VBoxDRMClient` (resolution follows the window on a
+Wayland session), `vboxwl` (clipboard) and the `vboxclient` autostart entry.
+
+To find the actual crash, `postinstall.sh` now also deletes the live
+`Storage=volatile` journald drop-in and creates `/var/log/journal`, so the
+installed system keeps its logs across reboots — without that, the evidence for
+a crash that forces a reboot is gone. `systemd-coredump` is enabled by default,
+so the backtrace is in `coredumpctl info kwin_wayland`; `synapseos-logs` collects
+that, the previous boot and the workaround variables into its bundle.
+
+
+### `Environment variable $SSH_AUTH_SOCK not set, ignoring.`
+
+Harmless. `cosmic-session`'s `/usr/bin/start-cosmic` ends with
+
+```bash
+systemctl --user import-environment XDG_SESSION_TYPE XDG_CURRENT_DESKTOP DCONF_PROFILE SSH_AUTH_SOCK
+```
+
+and `systemctl import-environment` logs that notice for every variable that is
+unset; it still exits 0. `start-cosmic` only sets `SSH_AUTH_SOCK` itself when
+`/run/user/$UID/keyring` already exists, i.e. when `pam_gnome_keyring` started
+the daemon at login, which this profile does not configure.
+
+The profile turns it into something useful instead of silencing it:
+`customize_airootfs.sh` runs `systemctl --global enable gcr-ssh-agent.socket`
+(from `gcr-4`) and adds `pam_gnome_keyring` to `/etc/pam.d/{login,greetd}` so
+start-cosmic's own keyring branch can run. `airootfs/etc/profile.d/synapseos-ssh-agent.sh`
+exports `SSH_AUTH_SOCK=$XDG_RUNTIME_DIR/gcr/ssh` for login shells (and starts
+the socket if needed) so the import always has a value. An inherited
+`SSH_AUTH_SOCK` (agent forwarding) is never overwritten.
+
+When cosmic-comp crashes the compositor surface goes away and that leftover
+tty1 line flashes through, which is why it looks like the SSH notice killed
+the desktop. Fix the crash (safe graphics) and the flash goes with it.
+
+On an already-installed system, without rebuilding:
+
+```bash
+systemctl --user enable --now gcr-ssh-agent.socket
+sudo cp /path/to/profile/airootfs/etc/profile.d/synapseos-ssh-agent.sh /etc/profile.d/
+```
 
 ## Rebuilding notes
 

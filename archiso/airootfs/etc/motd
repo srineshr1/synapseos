@@ -1,15 +1,20 @@
-.'  _.  .'  .'| SynapseOS live medium - Arch Linux + COSMIC desktop
+.'  _.  .'  .'| SynapseOS live medium - Arch Linux + Plasma
  |   |  |   |   | https://github.com/SynapseOs
   '._|  '._|  .'| Launch the installer:  Install SynapseOS
       |      .'  Login:  live / live (passwordless sudo)
       |  ..`
 
-To install:  click "Install SynapseOS" in the app launcher, or run:
+To install: the installer opens with the desktop. If it does not:
     synapseos-installer
 
-No desktop?  synapseos-cosmic      starts COSMIC and logs it
+No desktop?  synapseos-plasma      starts Plasma and logs it
              synapseos-logs        collects everything into one file
              journalctl -b -p err  errors from this boot
 
-Logs:  desktop    ~/.cache/synapseos/cosmic-session.log
+No menu/window blur? The session is on software composition. Enable 3D
+in the VM (VMSVGA) and reboot the normal Live entry — not "safe graphics".
+Desktop fails in a VM? Reboot and pick "safe graphics" (no blur), or:
+    sudo synapseos-safe-graphics on     # then log out and back in
+
+Logs:  desktop    ~/.cache/synapseos/plasma-session.log
        installer  ~/.cache/calamares/session.log

@@ -1,0 +1,23 @@
+[Desktop Entry]
+Type=Application
+Name=Synapse
+GenericName=OS assistant
+Comment=Ask the OS to open apps, inspect processes, navigate the browser
+Exec=synapseos-overlay
+Icon=synapseos-assistant
+Terminal=false
+Categories=Utility;System;
+Keywords=ai;assistant;synapse;
+StartupNotify=false
+X-KDE-Shortcuts=Meta+S
+Actions=pause;resume;
+
+[Desktop Action pause]
+Name=Pause Synapse
+Exec=synapseos-overlay --pause
+Icon=synapseos-assistant
+
+[Desktop Action resume]
+Name=Resume Synapse
+Exec=synapseos-overlay --resume
+Icon=synapseos-assistant

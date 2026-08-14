@@ -36,9 +36,38 @@ have() { command -v "$1" > /dev/null 2>&1; }
     section "journal, current boot (full)"
     journalctl -b --no-pager 2> /dev/null
 
-    section "cosmic-session log"
-    cat "${XDG_CACHE_HOME:-$HOME/.cache}/synapseos/cosmic-session.log" 2> /dev/null \
-        || echo "(no cosmic-session log - the desktop was never started from tty1)"
+    section "previous boot (warnings and above)"
+    journalctl -b -1 -p warning --no-pager 2> /dev/null \
+        || echo "(no previous boot in the journal)"
+
+    section "crashes: coredumpctl"
+    # systemd-coredump is enabled by default, so a cosmic-comp segfault lands
+    # here with a backtrace - this is the file to look at when the desktop
+    # restarts and takes every window with it.
+    if have coredumpctl; then
+        coredumpctl list --no-pager 2> /dev/null | tail -n 25
+        for prog in kwin_wayland kwin_x11 plasmashell sddm; do
+            if coredumpctl info "$prog" > /dev/null 2>&1; then
+                section "coredumpctl info $prog (most recent)"
+                coredumpctl info "$prog" 2> /dev/null | head -n 120
+            fi
+        done
+    else
+        echo "(coredumpctl not available)"
+    fi
+
+    section "compositor messages this boot"
+    journalctl -b --no-pager _COMM=kwin_wayland 2> /dev/null | tail -n 100
+    journalctl -b --no-pager _COMM=plasmashell 2> /dev/null | tail -n 80
+    journalctl -b --no-pager -u sddm 2> /dev/null | tail -n 80
+
+    section "compositor workaround variables"
+    printf 'KWIN_COMPOSE=%s\n' "${KWIN_COMPOSE:-unset}"
+    have systemd-detect-virt && echo "virtualisation: $(systemd-detect-virt)"
+
+    section "plasma-session log"
+    cat "${XDG_CACHE_HOME:-$HOME/.cache}/synapseos/plasma-session.log" 2> /dev/null \
+        || echo "(no plasma-session log - the desktop was never started from tty1)"
 
     section "calamares log"
     cat "$HOME/.cache/calamares/session.log" 2> /dev/null \

@@ -1,0 +1,5 @@
+[synapseos-assistant.desktop]
+_k_friendly_name=Synapse
+_launch=Meta+S,none,Ask Synapse
+pause=Ctrl+Alt+S,none,Pause Synapse
+resume=none,none,Resume Synapse

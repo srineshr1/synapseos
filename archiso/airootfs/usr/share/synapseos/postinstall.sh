@@ -65,6 +65,17 @@ if ! id -u "$RESCUE_USER" > /dev/null 2>&1; then
 fi
 echo "${RESCUE_USER}:${RESCUE_PASS}" | chpasswd
 
+# Recovery login should not run the Plasma welcome wizard. The real user
+# created by Calamares already inherits /etc/skel (theme + layout).
+install -d -m 0755 -o "$RESCUE_USER" -g "$RESCUE_USER" \
+    "/home/${RESCUE_USER}/.config"
+printf '[General]\nShouldShow=false\n' \
+    > "/home/${RESCUE_USER}/.config/plasma-welcomerc"
+chown "$RESCUE_USER:$RESCUE_USER" "/home/${RESCUE_USER}/.config/plasma-welcomerc"
+
+# Installed system must stop at the SDDM greeter, not autologin as live.
+rm -f /etc/sddm.conf.d/20-autologin.conf
+
 # wheel alone is not enough: users.conf sets sudoersConfigureWithGroup: false,
 # so Calamares' /etc/sudoers.d/10-installer names the created user, not %wheel.
 printf '%s ALL=(ALL:ALL) ALL\n' "$RESCUE_USER" > /etc/sudoers.d/20-rescue
@@ -75,11 +86,22 @@ visudo -cqf /etc/sudoers.d/20-rescue || {
     exit 1
 }
 
+# --- The journal must be persistent on disk -----------------------------------
+# The live medium sets Storage=volatile (RAM only) because writing to a squashfs
+# overlay is pointless. Copied to an installed system that setting silently
+# throws away every log at reboot, so a compositor crash or a failed boot cannot
+# be investigated afterwards. Drop the override; systemd's default (Storage=auto
+# with /var/log/journal present) keeps logs across reboots.
+rm -f /etc/systemd/journald.conf.d/volatile-storage.conf
+rmdir /etc/systemd/journald.conf.d 2> /dev/null || true
+install -d -m 2755 -g systemd-journal /var/log/journal
+
 # --- The live pacman repo must not linger -----------------------------------
 sed -i '/^\[synapseos-local\]/,/^$/d' /etc/pacman.conf
 
 # --- Remove the installer itself --------------------------------------------
 rm -f /usr/share/applications/synapseos-installer.desktop \
+      /etc/xdg/autostart/synapseos-installer.desktop \
       /usr/bin/synapseos-installer \
       /usr/share/pixmaps/synapseos-installer.png
 rm -rf /etc/calamares
@@ -109,8 +131,10 @@ own account works:
 EOF
 chmod 644 /etc/motd
 
-# Includes prepare.sh, postinstall.sh and the kernel/microcode stash that
-# prepare.sh copied back into /boot.
-rm -rf /usr/share/synapseos
+# Installer scratch only. Keep dock.js, gtk-theme-name and anything else the
+# installed desktop still reads from this tree. The assistant lives in
+# /usr/lib/synapseos and is not touched here.
+rm -rf /usr/share/synapseos/boot
+rm -f /usr/share/synapseos/prepare.sh /usr/share/synapseos/postinstall.sh
 
 exit 0

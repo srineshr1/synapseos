@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SynapseOS chrome
+Comment=Pin Breeze decorations, bounce animation and fonts
+Exec=/usr/bin/synapseos-apply-chrome
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=1
+StartupNotify=false
+NoDisplay=true

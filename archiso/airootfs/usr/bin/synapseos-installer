@@ -1,11 +1,49 @@
 #!/usr/bin/env bash
-# Launch Calamares as root from the live COSMIC session.
+# Launch Calamares as root from the live Plasma session.
 #
 # `sudo calamares` does not work here: sudo resets the environment, so the
 # installer starts with no WAYLAND_DISPLAY/XDG_RUNTIME_DIR, fails to connect to
 # a display and exits immediately - which looks exactly like "clicking the
 # installer does nothing". Pass the session variables through explicitly.
+#
+# --autostart is used by /etc/xdg/autostart on the live medium. It waits for
+# the compositor, refuses to run after install, and takes a lock so two
+# autostart paths cannot open two windows.
 set -euo pipefail
+
+wait_for_wayland() {
+    local i sock
+    export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    for i in $(seq 1 60); do
+        if [ -n "${WAYLAND_DISPLAY:-}" ] && [ -S "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]; then
+            return 0
+        fi
+        for sock in wayland-1 wayland-0; do
+            if [ -S "${XDG_RUNTIME_DIR}/${sock}" ]; then
+                export WAYLAND_DISPLAY="$sock"
+                return 0
+            fi
+        done
+        sleep 0.5
+    done
+    return 1
+}
+
+if [[ "${1:-}" == --autostart ]]; then
+    shift
+    # Live ISO only. After install this path is gone, so a leaked autostart
+    # entry cannot pop Calamares (or a missing-binary error) on the new user.
+    [[ -d /run/archiso ]] || exit 0
+    [[ -x /usr/bin/calamares ]] || exit 0
+    wait_for_wayland || exit 0
+    mkdir -p "${XDG_RUNTIME_DIR}"
+    exec 9>"${XDG_RUNTIME_DIR}/synapseos-installer.lock"
+    flock -n 9 || exit 0
+    # Panel/dock finish starting; opening immediately lands under a blank frame.
+    sleep 2
+    export XDG_SESSION_TYPE="${XDG_SESSION_TYPE:-wayland}"
+    export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-KDE}"
+fi
 
 if [ "$(id -u)" -eq 0 ]; then
     exec calamares "$@"

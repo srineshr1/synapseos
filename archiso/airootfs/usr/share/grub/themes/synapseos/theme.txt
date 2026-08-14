@@ -1,0 +1,35 @@
+# SynapseOS live / installed GRUB theme
+desktop-image: "splash.png"
+desktop-color: "#181926"
+title-text: ""
+message-color: "#d8d2ea"
+terminal-box: "select_*.png"
+terminal-font: "DejaVu Sans Regular 24"
+
++ boot_menu {
+    left = 14%
+    top = 48%
+    width = 72%
+    height = 38%
+    item_font = "DejaVu Sans Regular 24"
+    item_color = "#f4f0fc"
+    selected_item_color = "#ffffff"
+    selected_item_pixmap_style = "select_*.png"
+    item_height = 48
+    item_padding = 20
+    item_spacing = 8
+    icon_width = 0
+    icon_height = 0
+    item_icon_space = 0
+}
+
++ label {
+    id = "__timeout__"
+    left = 14%
+    top = 90%
+    width = 72%
+    align = "center"
+    text = "Booting in %d seconds"
+    color = "#a89bc4"
+    font = "DejaVu Sans Regular 24"
+}

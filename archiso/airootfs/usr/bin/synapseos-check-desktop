@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Print decoration + effect state. Run as the desktop user.
+set -u
+
+echo "=== fonts ==="
+fc-list | grep -i 'JetBrainsMono Nerd Font' | head -5 || echo "NO JetBrains families visible to fontconfig"
+echo "kdeglobals font=$(grep -E '^(font|fixed|activeFont)=' "${XDG_CONFIG_HOME:-$HOME/.config}/kdeglobals" | tr '\n' ' ')"
+if [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/konsole/SynapseOS.profile" ]]; then
+    grep '^Font=' "${XDG_DATA_HOME:-$HOME/.local/share}/konsole/SynapseOS.profile"
+fi
+
+echo
+echo "=== decorations ==="
+for f in "${XDG_CONFIG_HOME:-$HOME/.config}/kwinrc" /etc/xdg/kwinrc; do
+    [[ -f "$f" ]] || continue
+    echo "-- $f"
+    grep -E '^(library|theme|BorderSize)=' "$f" || true
+done
+
+echo
+echo "=== compositor / blur ==="
+printf 'KWIN_COMPOSE=%s\n' "${KWIN_COMPOSE:-unset}"
+if [[ "${KWIN_COMPOSE:-}" == Q ]]; then
+    echo "WARN: software composition — blur cannot run. Reboot without safegfx,"
+    echo "      or: sudo synapseos-safe-graphics off && loginctl terminate-user $USER"
+fi
+grep -E '^(blurEnabled|contrastEnabled|BlurStrength|MenuOpacity)=' \
+    "${XDG_CONFIG_HOME:-$HOME/.config}/kwinrc" \
+    "${XDG_CONFIG_HOME:-$HOME/.config}/breezerc" \
+    /etc/xdg/kwinrc /etc/xdg/breezerc 2>/dev/null || true
+
+echo
+echo "=== effect flags (kwinrc) ==="
+grep -E '^(scale|synapseosjump|magiclamp|squash|glide|fade|blur)Enabled=' \
+    "${XDG_CONFIG_HOME:-$HOME/.config}/kwinrc" /etc/xdg/kwinrc 2>/dev/null || true
+
+echo
+echo "=== effect files ==="
+ls -d /usr/share/kwin-wayland/effects/scale \
+      /usr/share/kwin-wayland/effects/synapseosjump \
+      /usr/share/kwin/effects/synapseosjump 2>&1
+
+echo
+echo "=== scale overlay (expect OutBounce) ==="
+if grep -n OutBounce /usr/share/kwin-wayland/effects/scale/contents/code/main.js 2>/dev/null; then
+    :
+else
+    echo "MISSING OutBounce in scale effect — ISO overlay not applied"
+fi
+
+echo
+echo "=== kwin dbus ==="
+if command -v qdbus6 >/dev/null; then
+    dbus=qdbus6
+elif command -v qdbus >/dev/null; then
+    dbus=qdbus
+else
+    dbus=""
+fi
+if [[ -n "$dbus" ]]; then
+    echo "loaded:"
+    $dbus org.kde.KWin /Effects org.kde.kwin.Effects.loadedEffects 2>/dev/null | tr ',' '\n' \
+        | grep -Ei 'scale|jump|magic|squash|glide|fade|blur|contrast' || echo "(no matching loaded effects)"
+    echo "blur loaded? $($dbus org.kde.KWin /Effects org.kde.kwin.Effects.isEffectLoaded blur 2>/dev/null)"
+    echo "better_blur_dx loaded? $($dbus org.kde.KWin /Effects org.kde.kwin.Effects.isEffectLoaded better_blur_dx 2>/dev/null)"
+    echo "active:"
+    $dbus org.kde.KWin /Effects org.kde.kwin.Effects.activeEffects 2>/dev/null || true
+    echo "scale loaded? $($dbus org.kde.KWin /Effects org.kde.kwin.Effects.isEffectLoaded scale 2>/dev/null)"
+    echo "synapseosjump loaded? $($dbus org.kde.KWin /Effects org.kde.kwin.Effects.isEffectLoaded synapseosjump 2>/dev/null)"
+else
+    echo "qdbus6 not found"
+fi
+
+echo
+echo "=== recent kwin errors ==="
+journalctl --user -b --no-pager -n 80 2>/dev/null \
+    | grep -Ei 'kwin|synapseosjump|scripted|aurorae|effect' | tail -20 \
+    || true
+if [[ -f "${XDG_CACHE_HOME:-$HOME/.cache}/synapseos/plasma-session.log" ]]; then
+    echo "-- plasma-session.log --"
+    grep -Ei 'kwin|effect|aurorae|scripted' \
+        "${XDG_CACHE_HOME:-$HOME/.cache}/synapseos/plasma-session.log" | tail -20
+fi

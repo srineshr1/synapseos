@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Aether
+Comment=Extract colors from a wallpaper and apply them to Plasma
+Exec=env WEBKIT_DISABLE_COMPOSITING_MODE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1 aether
+Icon=aether
+Type=Application
+Categories=Utility;Settings;
+Keywords=theme;wallpaper;colors;
+StartupWMClass=aether

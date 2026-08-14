@@ -1,0 +1,14 @@
+[Unit]
+Description=SynapseOS Core (OS MCP broker)
+Documentation=file:///usr/share/doc/synapseos/README.md
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/synapseos-core
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

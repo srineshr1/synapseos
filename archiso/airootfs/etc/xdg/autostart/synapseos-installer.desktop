@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Install SynapseOS
+Comment=Launch the SynapseOS installer when the live desktop starts
+Exec=/usr/bin/synapseos-installer --autostart
+TryExec=/usr/bin/synapseos-installer
+Icon=/usr/share/pixmaps/synapseos-installer.png
+Terminal=false
+NoDisplay=true
+StartupNotify=true
+OnlyShowIn=KDE;
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=2

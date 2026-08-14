@@ -9,26 +9,33 @@ echo "live:live" | chpasswd
 printf '%%wheel ALL=(ALL:ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/10-live
 chmod 440 /etc/sudoers.d/10-live
 
-# Auto-start the COSMIC session on the live user's first login.
-# synapseos-cosmic wraps the cosmic-session package's own /usr/bin/start-cosmic,
-# logs to ~/.cache/synapseos/cosmic-session.log and returns to the shell on
-# failure instead of exec'ing, so a compositor that dies leaves a diagnosable
-# console rather than a getty restart loop. SYNAPSEOS_COSMIC_AUTOSTART guards
-# against recursion: start-cosmic re-execs itself through a login shell, which
-# sources this file again.
+# Auto-start Plasma on the live user's first login from tty1.
+# synapseos-plasma wraps startplasma-wayland, logs to
+# ~/.cache/synapseos/plasma-session.log and returns to the shell on
+# failure instead of exec'ing, so a compositor that dies leaves a
+# diagnosable console rather than a getty restart loop.
 cat > /home/live/.zprofile << 'EOF'
 if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DISPLAY:-}" ] && [ "$(tty)" = "/dev/tty1" ] &&
-   [ -z "${SYNAPSEOS_COSMIC_AUTOSTART:-}" ]; then
+   [ -z "${SYNAPSEOS_PLASMA_AUTOSTART:-}" ]; then
     if grep -qw nodesktop /proc/cmdline; then
-        printf '\nnodesktop on the kernel command line: COSMIC was not started.\n'
-        printf 'Start it with:  synapseos-cosmic     Collect diagnostics:  synapseos-logs\n\n'
+        printf '\nnodesktop on the kernel command line: Plasma was not started.\n'
+        printf 'Start it with:  synapseos-plasma     Collect diagnostics:  synapseos-logs\n\n'
     else
-        export SYNAPSEOS_COSMIC_AUTOSTART=1
-        synapseos-cosmic
+        export SYNAPSEOS_PLASMA_AUTOSTART=1
+        synapseos-plasma
     fi
 fi
 EOF
 chown live:live /home/live/.zprofile
+
+# Also drop the installer into the live user's autostart. Plasma starts
+# xdg-desktop-autostart.target, which picks up both this and
+# /etc/xdg/autostart/; synapseos-installer --autostart takes a lock so
+# only one Calamares window appears.
+install -d -m 0755 -o live -g live /home/live/.config/autostart
+install -o live -g live -m 0644 \
+    /etc/xdg/autostart/synapseos-installer.desktop \
+    /home/live/.config/autostart/synapseos-installer.desktop
 
 # Network: NetworkManager instead of systemd-networkd on the live media
 systemctl mask systemd-networkd.service
@@ -37,11 +44,118 @@ systemctl enable NetworkManager.service
 # Generic live helpers kept from upstream
 systemctl enable pacman-init.service choose-mirror.service
 
+# --- SSH agent ---------------------------------------------------------------
+# cosmic-session's /usr/bin/start-cosmic ends with
+#   systemctl --user import-environment XDG_SESSION_TYPE XDG_CURRENT_DESKTOP \
+#                                       DCONF_PROFILE SSH_AUTH_SOCK
+# and only sets SSH_AUTH_SOCK itself when /run/user/$UID/keyring exists, i.e.
+# when gnome-keyring-daemon was already started by PAM. It is not, so the
+# variable is unset and systemctl logs, at every single login,
+#   Environment variable $SSH_AUTH_SOCK not set, ignoring.
+# Enabling gcr's agent for every user gives the session a real ssh-agent, and
+# /etc/profile.d/synapseos-ssh-agent.sh puts its socket in the environment so
+# the import has something to import.
+systemctl --global enable gcr-ssh-agent.socket
+# OS MCP broker: starts with the graphical session for every user.
+systemctl --global enable synapse-core.service
+find /usr/lib/synapseos -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+
+# start-cosmic only looks for gcr/keyring SSH sockets when this directory
+# already exists, i.e. when pam_gnome_keyring ran at login. greetd's stock
+# PAM file does not include it (unlike GDM/SDDM). Optional, so a missing
+# module cannot block login.
+_add_gnome_keyring_pam() {
+    local pam_file="$1"
+    [[ -f "$pam_file" ]] || return 0
+    grep -q 'pam_gnome_keyring\.so' "$pam_file" && return 0
+    printf '\nauth       optional     pam_gnome_keyring.so\nsession    optional     pam_gnome_keyring.so auto_start\n' >> "$pam_file"
+}
+_add_gnome_keyring_pam /etc/pam.d/login
+_add_gnome_keyring_pam /etc/pam.d/greetd
+unset -f _add_gnome_keyring_pam
+
 # The calamares package ships its own launcher that runs `sh -c "pkexec
 # calamares"`. On a Wayland session pkexec drops WAYLAND_DISPLAY and the window
 # never appears, so hide it and leave only "Install SynapseOS", which forwards
 # the session environment (see /usr/bin/synapseos-installer).
 rm -f /usr/share/applications/calamares.desktop
+
+# Look is owned by Aether. Hide Plasma's Appearance category and theme KCMs
+# so they never show in System Settings or KRunner.
+for _cat in \
+    /usr/share/systemsettings/categories/settings-appearance.desktop \
+    /usr/share/systemsettings/categories/settings-appearance-font.desktop \
+    /usr/share/systemsettings/categories/settings-appearance-themes.desktop
+do
+    [[ -f "$_cat" ]] || continue
+    grep -q '^Hidden=true' "$_cat" 2>/dev/null || printf '\nHidden=true\nNoDisplay=true\n' >> "$_cat"
+done
+for _kcm in colors desktoptheme style icons cursortheme fonts fontinst \
+            kwindecoration lookandfeel splashscreen wallpaper animations \
+            soundtheme breezedecoration qtquicksettings; do
+    _desk="/usr/share/applications/kcm_${_kcm}.desktop"
+    [[ -f "$_desk" ]] || continue
+    grep -q '^Hidden=true' "$_desk" 2>/dev/null || printf '\nHidden=true\nNoDisplay=true\n' >> "$_desk"
+done
+
+# Kickoff + wired-network icons: a 3x3 grid and a globe, not the KDE K
+# or Papirus computer/ethernet glyph.
+_icon_src=/usr/share/synapseos/icons
+if [[ -d "$_icon_src" ]]; then
+    install -d /usr/share/icons/hicolor/scalable/apps
+    install -m 0644 "$_icon_src/synapseos-launcher.svg" \
+        /usr/share/icons/hicolor/scalable/apps/synapseos-launcher.svg
+    install -m 0644 "$_icon_src/synapseos-launcher.svg" \
+        /usr/share/pixmaps/synapseos-launcher.svg
+    for _theme in Papirus-Dark Papirus; do
+        for _dir in /usr/share/icons/"$_theme"/*/apps /usr/share/icons/"$_theme"/scalable/apps; do
+            [[ -d "$_dir" ]] || continue
+            ln -sfn "$_icon_src/synapseos-launcher.svg" "$_dir/start-here-kde.svg"
+            ln -sfn "$_icon_src/synapseos-launcher.svg" "$_dir/synapseos-launcher.svg"
+        done
+        for _dir in /usr/share/icons/"$_theme"/*/status /usr/share/icons/"$_theme"/scalable/status; do
+            [[ -d "$_dir" ]] || continue
+            for _name in network-wired network-wired-activated network-wired-acquiring \
+                network-wired-available network-wired-disconnected network-wired-error \
+                network-wired-no-route network-wired-offline network-wired-unavailable \
+                nm-device-wired network-wired-activated-private; do
+                ln -sfn "$_icon_src/network-wired.svg" "$_dir/${_name}.svg"
+            done
+        done
+    done
+    gtk-update-icon-cache -q /usr/share/icons/hicolor 2>/dev/null || true
+    gtk-update-icon-cache -q /usr/share/icons/Papirus-Dark 2>/dev/null || true
+fi
+unset _icon_src _theme _dir _name
+
+# Clean Konsole: no tab/split toolbar, always the SynapseOS profile (fonts).
+if [[ -f /usr/share/applications/org.kde.konsole.desktop ]]; then
+    sed -i \
+        -e 's|^Exec=konsole$|Exec=konsole --hide-menubar --hide-toolbars --hide-tabbar --profile SynapseOS.profile|' \
+        -e 's|^Exec=konsole --new-tab$|Exec=konsole --new-tab --profile SynapseOS.profile|' \
+        /usr/share/applications/org.kde.konsole.desktop
+fi
+
+# Aether's desktop file is owned by the aether package. Overlaying it in
+# the profile makes pacstrap fail with "exists in filesystem".
+if [[ -f /usr/share/synapseos/aether/aether.desktop ]]; then
+    install -m 0644 /usr/share/synapseos/aether/aether.desktop \
+        /usr/share/applications/aether.desktop
+fi
+
+# Bounce overlay for the stock scale effect. Cannot live under
+# /usr/share/kwin-wayland in the profile: kwin owns that path and
+# pacstrap refuses to overwrite it.
+if [[ -f /usr/share/synapseos/kwin/scale-main.js ]]; then
+    install -d /usr/share/kwin-wayland/effects/scale/contents/code
+    install -m 0644 /usr/share/synapseos/kwin/scale-main.js \
+        /usr/share/kwin-wayland/effects/scale/contents/code/main.js
+fi
+
+# Qt will not see JetBrains if the live image has no fontconfig cache.
+if command -v fc-cache >/dev/null; then
+    fc-cache -f /usr/share/fonts >/dev/null 2>&1 || true
+fi
 
 # The local build repo must not linger in the live pacman.conf
 sed -i '/^\[synapseos-local\]/,/^$/d' /etc/pacman.conf

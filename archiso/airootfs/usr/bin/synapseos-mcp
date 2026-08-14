@@ -1,0 +1,18 @@
+#!/usr/bin/python3
+"""stdio MCP adapter — same tools as the unix socket, for agent CLIs."""
+import sys
+from pathlib import Path
+
+
+def _lib() -> str:
+    here = Path(__file__).resolve()
+    for cand in (here.parent.parent / "lib" / "synapseos", Path("/usr/lib/synapseos")):
+        if (cand / "synapseos" / "__init__.py").is_file():
+            return str(cand)
+    return "/usr/lib/synapseos"
+
+
+sys.path.insert(0, _lib())
+from synapseos.server import main  # noqa: E402
+
+raise SystemExit(main(["--stdio", *sys.argv[1:]]))

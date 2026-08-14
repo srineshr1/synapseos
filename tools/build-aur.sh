@@ -2,9 +2,9 @@
 # Build the AUR packages this profile needs and stage them in archiso/repo/,
 # which pacman.conf exposes to mkarchiso as the [synapseos-local] repository.
 #
-# Run as a normal user (makepkg refuses to run as root). No sudo is needed:
-# every package here is a binary repack, so nothing is compiled and build-time
-# dependency checks are skipped with -d.
+# Run as a normal user (makepkg refuses to run as root). Most packages are
+# binary repacks. kwin-effects-better-blur-dx is compiled against the host
+# kwin — rebuild it after a kwin upgrade. Dependency checks are skipped (-d).
 #
 #   ./tools/build-aur.sh              # build all packages
 #   ./tools/build-aur.sh opencode-bin # build just one
@@ -16,6 +16,7 @@ PACKAGES=(
     opencode-bin        # opencode agent         -> provides `opencode`
     helium-browser-bin  # Helium browser (Chromium fork)
     paru-bin            # AUR helper, so the installed system can use the AUR
+    kwin-effects-better-blur-dx  # force-blur windows (Hyprland-style frost)
 )
 
 if (( $# )); then

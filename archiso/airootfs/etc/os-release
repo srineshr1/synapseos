@@ -1,0 +1,13 @@
+NAME="SynapseOS"
+PRETTY_NAME="SynapseOS"
+ID=synapseos
+ID_LIKE=arch
+BUILD_ID=rolling
+ANSI_COLOR="38;2;198;160;246"
+HOME_URL="https://github.com/SynapseOs"
+DOCUMENTATION_URL="https://github.com/SynapseOs"
+SUPPORT_URL="https://github.com/SynapseOs"
+BUG_REPORT_URL="https://github.com/SynapseOs"
+LOGO=synapseos
+VARIANT="Plasma"
+VARIANT_ID=plasma

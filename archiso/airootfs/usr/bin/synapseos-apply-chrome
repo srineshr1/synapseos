@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# Force Breeze decorations, frosted menus, bounce, and JetBrains fonts.
+# Runs at login so a look-and-feel apply cannot leave Aurorae behind.
+set -euo pipefail
+
+FLAG="${XDG_CONFIG_HOME:-$HOME/.config}/synapseos/chrome-version"
+VERSION=5
+RULE_WINDOWS=a11e0001-5e0f-4b10-9c0d-000000000001
+RULE_BROWSERS=a11e0001-5e0f-4b10-9c0d-000000000002
+BROWSER_RE='firefox|firefox-esr|Google-chrome|chromium|brave-browser|helium|helium-browser|librewolf|zen|vivaldi-stable|msedge|opera|org.mozilla.firefox'
+BROWSER_CLASSES='/firefox|firefox-esr|google-chrome|chromium|brave-browser|helium|helium-browser|librewolf|zen|vivaldi-stable|msedge|opera|org.mozilla.firefox/'
+
+kw() {
+    if command -v kwriteconfig6 >/dev/null; then
+        kwriteconfig6 "$@"
+    elif command -v kwriteconfig5 >/dev/null; then
+        kwriteconfig5 "$@"
+    else
+        return 1
+    fi
+}
+
+# Always pin Breeze. Cheap, and look-and-feel likes to undo it.
+kw --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze
+kw --file kwinrc --group org.kde.kdecoration2 --key theme Breeze
+kw --file kwinrc --group org.kde.kdecoration2 --key BorderSize Normal
+kw --file kwinrc --group org.kde.kdecoration2 --key BorderSizeAuto false
+kw --file kwinrc --group Plugins --key scaleEnabled true
+kw --file kwinrc --group Plugins --key synapseosjumpEnabled false
+kw --file kwinrc --group Plugins --key magiclampEnabled true
+kw --file kwinrc --group Plugins --key squashEnabled false
+kw --file kwinrc --group Plugins --key glideEnabled false
+kw --file kwinrc --group Plugins --key fadeEnabled false
+kw --file kwinrc --group Effect-scale --key Duration 520
+kw --file kwinrc --group Effect-scale --key InScale 0.55
+kw --file kwinrc --group Effect-scale --key OutScale 0.55
+kw --file kwinrc --group Plugins --key blurEnabled false
+kw --file kwinrc --group Plugins --key better_blur_dxEnabled true
+kw --file kwinrc --group Plugins --key contrastEnabled false
+kw --file kwinrc --group Effect-blur --key BlurStrength 12
+kw --file kwinrc --group Effect-blur --key NoiseStrength 2
+kw --file kwinrc --group Effect-better-blur-dx --key BlurStrength 12
+kw --file kwinrc --group Effect-better-blur-dx --key NoiseStrength 2
+kw --file kwinrc --group Effect-better-blur-dx --key BlurMatching false
+kw --file kwinrc --group Effect-better-blur-dx --key BlurNonMatching true
+kw --file kwinrc --group Effect-better-blur-dx --key BlurDecorations true
+kw --file kwinrc --group Effect-better-blur-dx --key BlurMenus true
+kw --file kwinrc --group Effect-better-blur-dx --key BlurDocks true
+kw --file kwinrc --group Effect-better-blur-dx --key WindowClasses "$BROWSER_CLASSES"
+kw --file kwinrc --group Compositing --key OpenGLIsUnsafe false
+kw --file breezerc --group Style --key MenuOpacity 70
+
+# Window opacity (Hyprland-style). Keys are lowercase — KWin ignores
+# opacityactiveRule. Only ~/.config/kwinrulesrc is read (NoGlobals).
+kw --file kwinrulesrc --group General --key count 2
+kw --file kwinrulesrc --group General --key rules "${RULE_WINDOWS},${RULE_BROWSERS}"
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key Description "SynapseOS translucent windows"
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key Enabled true
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key opacityactive 98
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key opacityactiverule 2
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key opacityinactive 80
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key opacityinactiverule 2
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key types 1
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key wmclass ""
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key wmclassmatch 0
+kw --file kwinrulesrc --group "$RULE_BROWSERS" --key Description "Opaque browsers"
+kw --file kwinrulesrc --group "$RULE_BROWSERS" --key Enabled true
+kw --file kwinrulesrc --group "$RULE_BROWSERS" --key opacityactive 100
+kw --file kwinrulesrc --group "$RULE_BROWSERS" --key opacityactiverule 2
+kw --file kwinrulesrc --group "$RULE_BROWSERS" --key opacityinactive 100
+kw --file kwinrulesrc --group "$RULE_BROWSERS" --key opacityinactiverule 2
+kw --file kwinrulesrc --group "$RULE_BROWSERS" --key wmclass "$BROWSER_RE"
+kw --file kwinrulesrc --group "$RULE_BROWSERS" --key wmclasscomplete false
+kw --file kwinrulesrc --group "$RULE_BROWSERS" --key wmclassmatch 3
+kw --file kwinrulesrc --group "$RULE_BROWSERS" --key types 1
+
+UI='JetBrainsMono Nerd Font Propo,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'
+MONO='JetBrainsMono Nerd Font Mono,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'
+kw --file kdeglobals --group General --key font "$UI"
+kw --file kdeglobals --group General --key menuFont "$UI"
+kw --file kdeglobals --group General --key toolBarFont "$UI"
+kw --file kdeglobals --group General --key smallestReadableFont \
+    'JetBrainsMono Nerd Font Propo,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'
+kw --file kdeglobals --group General --key fixed "$MONO"
+kw --file kdeglobals --group WM --key activeFont "$UI"
+
+# Keep the Plasma hook current. Older homes still have the one-shot
+# post-apply.sh that ignored every Apply after the first.
+HOOK_SRC=/usr/share/synapseos/aether/plasma
+HOOK_DST="${XDG_CONFIG_HOME:-$HOME/.config}/aether/custom/plasma"
+if [[ -d "$HOOK_SRC" ]]; then
+    mkdir -p "$HOOK_DST"
+    cp -f "$HOOK_SRC/post-apply.sh" "$HOOK_DST/post-apply.sh"
+    chmod 755 "$HOOK_DST/post-apply.sh"
+    if [[ ! -f "$HOOK_DST/config.json" && -f "$HOOK_SRC/config.json" ]]; then
+        cp -f "$HOOK_SRC/config.json" "$HOOK_DST/config.json"
+    fi
+    if [[ ! -f "$HOOK_DST/Aether.colors" && -f "$HOOK_SRC/Aether.colors" ]]; then
+        cp -f "$HOOK_SRC/Aether.colors" "$HOOK_DST/Aether.colors"
+    fi
+fi
+
+kw --file konsolerc --group 'Desktop Entry' --key DefaultProfile SynapseOS.profile
+PROFILE="${XDG_DATA_HOME:-$HOME/.local/share}/konsole/SynapseOS.profile"
+if [[ -f "$PROFILE" ]]; then
+    kw --file "$PROFILE" --group Appearance --key Font "$MONO"
+fi
+
+for gtk in \
+    "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/settings.ini" \
+    "${XDG_CONFIG_HOME:-$HOME/.config}/gtk-4.0/settings.ini"
+do
+    if [[ -f "$gtk" ]]; then
+        sed -i 's/^gtk-font-name=.*/gtk-font-name=JetBrainsMono Nerd Font Propo 10/' "$gtk"
+    fi
+done
+
+if command -v qdbus6 >/dev/null; then
+    qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+    qdbus6 org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect scale >/dev/null 2>&1 || true
+    qdbus6 org.kde.KWin /Effects org.kde.kwin.Effects.unloadEffect blur >/dev/null 2>&1 || true
+    qdbus6 org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect better_blur_dx >/dev/null 2>&1 || true
+    qdbus6 org.kde.KWin /Effects org.kde.kwin.Effects.unloadEffect contrast >/dev/null 2>&1 || true
+    qdbus6 org.kde.KWin /Effects org.kde.kwin.Effects.unloadEffect synapseosjump >/dev/null 2>&1 || true
+elif command -v qdbus >/dev/null; then
+    qdbus org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+    qdbus org.kde.KWin /Effects org.kde.kwin.Effects.unloadEffect blur >/dev/null 2>&1 || true
+    qdbus org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect better_blur_dx >/dev/null 2>&1 || true
+    qdbus org.kde.KWin /Effects org.kde.kwin.Effects.unloadEffect contrast >/dev/null 2>&1 || true
+fi
+dbus-send --session --type=signal /BreezeStyle \
+    org.kde.Breeze.Style.reparseConfiguration >/dev/null 2>&1 || true
+
+mkdir -p "$(dirname "$FLAG")"
+printf '%s\n' "$VERSION" > "$FLAG"
+exit 0

@@ -116,7 +116,11 @@ usb_modeswitch
 usbmuxd
 usbutils
 vim
-virtualbox-guest-utils-nox
+# The -nox variant ships only VBoxService/VBoxControl. The full package adds
+# VBoxDRMClient (dynamic resolution on a Wayland/DRM session), vboxwl (clipboard
+# sharing under Wayland) and the vboxclient XDG autostart entry, which is what a
+# COSMIC guest actually needs. It conflicts with virtualbox-guest-utils-nox.
+virtualbox-guest-utils
 vpnc
 wireless-regdb
 wireless_tools
@@ -127,12 +131,58 @@ xfsprogs
 xl2tpd
 zsh
 
-# ---- SynapseOS COSMIC desktop ----
-cosmic
+# ---- SynapseOS Plasma desktop (Catppuccin Macchiato) ----
+plasma-desktop
+plasma-workspace
+plasma-nm
+plasma-pa
+plasma-systemmonitor
+kdeplasma-addons
+kscreen
+powerdevil
+bluedevil
+kwin
+kwin-effects-better-blur-dx
+vulkan-headers
+sddm
+sddm-kcm
+dolphin
+konsole
+kate
+gwenview
+spectacle
+ark
+okular
+kinfocenter
+kde-gtk-config
+breeze
+breeze-gtk
+breeze-icons
+papirus-icon-theme
+kvantum
+qt6-svg
+qt6-declarative
+qt5-quickcontrols2
+xdg-desktop-portal-kde
+kwalletmanager
+kwallet-pam
+ksshaskpass
+phonon-qt6-vlc
+plasma-browser-integration
 firefox
+# Secrets / SSH agent used by /etc/profile.d/synapseos-ssh-agent.sh
+gcr-4
+gnome-keyring
 networkmanager
 noto-fonts
 noto-fonts-emoji
+inter-font
+ttf-jetbrains-mono-nerd
+# Wallpaper-driven theme. Aether writes GTK + our Plasma color scheme hook.
+aether
+webkit2gtk-4.1
+gtk3
+gtk-layer-shell
 pipewire
 pipewire-pulse
 wireplumber
@@ -210,6 +260,9 @@ docker-compose
 docker-buildx
 
 # ---- CLI utilities ----
+# Default logo is the Arch mark (os-release stays Arch). /etc/fastfetch/
+# overrides only that symbol with the SynapseOS circle-S.
+fastfetch
 ripgrep
 fd
 fzf
@@ -232,6 +285,10 @@ unzip
 # ---- Browsers ----
 # firefox is above; helium-browser-bin is a Chromium fork from the AUR.
 helium-browser-bin
+
+# Overlay UI for Super+S (synapseos-overlay). Qt 6 itself is already pulled
+# in by Plasma; this is the Python bindings.
+pyside6
 
 # ---- AI coding agents (staged from the AUR, see tools/build-aur.sh) ----
 # All three need to be logged in on first run and require network access.

@@ -4,8 +4,15 @@ import calamares.slideshow 1.0
 Presentation {
     id: presentation
 
+    function onActivate() {
+        presentation.currentSlide = 0
+    }
+
+    function onLeave() {
+    }
+
     Timer {
-        interval: 20000
+        interval: 16000
         running: true
         repeat: true
         onTriggered: presentation.goToNextSlide()
@@ -13,50 +20,44 @@ Presentation {
 
     Slide {
         Image {
-            id: slide1a
+            anchors.fill: parent
             source: "slide1.png"
-            width: 480
-            height: 300
-            fillMode: Image.PreserveAspectFit
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
+            fillMode: Image.PreserveAspectCrop
         }
     }
 
     Slide {
         Image {
-            id: slide2a
+            anchors.fill: parent
             source: "slide2.png"
-            width: 480
-            height: 300
-            fillMode: Image.PreserveAspectFit
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
+            fillMode: Image.PreserveAspectCrop
         }
     }
 
     Slide {
         Image {
-            id: slide3a
+            anchors.fill: parent
             source: "slide3.png"
-            width: 480
-            height: 300
-            fillMode: Image.PreserveAspectFit
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
+            fillMode: Image.PreserveAspectCrop
         }
     }
 
     Slide {
+        Rectangle {
+            anchors.fill: parent
+            color: "#181926"
+        }
+
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            text: qsTr("Installation complete. Reboot into SynapseOS and enjoy the COSMIC desktop.")
+            text: qsTr("Installation complete.\nReboot into SynapseOS and enjoy Plasma.")
             wrapMode: Text.WordWrap
-            width: 480
+            width: Math.min(parent.width - 80, 640)
             horizontalAlignment: Text.AlignHCenter
-            color: "#e8eef7"
-            font.pixelSize: 22
+            color: "#cad3f5"
+            font.pixelSize: 26
+            lineHeight: 1.25
         }
     }
 }

@@ -1,0 +1,10 @@
+msg() {
+  printf "%b" "\e[1;31m==> WARNING: Disable the default KWin Blur effect, then enable Better Blur DX.\n\e[0m"
+}
+
+post_install() {
+  msg
+}
+post_upgrade() {
+  msg
+}

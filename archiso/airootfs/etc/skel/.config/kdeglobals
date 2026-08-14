@@ -1,0 +1,34 @@
+[General]
+ColorScheme=CatppuccinMacchiatoMauve
+Name=Catppuccin Macchiato
+fixed=JetBrainsMono Nerd Font Mono,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+font=JetBrainsMono Nerd Font Propo,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+menuFont=JetBrainsMono Nerd Font Propo,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+smallestReadableFont=JetBrainsMono Nerd Font Propo,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+toolBarFont=JetBrainsMono Nerd Font Propo,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+XftHintStyle=hintslight
+XftSubPixel=rgb
+
+[Icons]
+Theme=Papirus-Dark
+
+[KDE]
+LookAndFeelPackage=Catppuccin-Macchiato-Mauve
+SingleClick=false
+widgetStyle=Breeze
+AnimationDurationFactor=0.85
+
+
+
+[KScreen]
+ScreenScaleFactors=
+ScaleFactor=1
+
+[WM]
+activeBackground=36,39,58
+activeBlend=36,39,58
+activeForeground=202,211,245
+inactiveBackground=30,32,48
+inactiveBlend=30,32,48
+inactiveForeground=165,173,203
+activeFont=JetBrainsMono Nerd Font Propo,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Apply the floating Macchiato dock once per layout version.
+set -euo pipefail
+
+FLAG="${XDG_CONFIG_HOME:-$HOME/.config}/synapseos/dock-version"
+VERSION=9
+SCRIPT="${SYNAPSEOS_DOCK_JS:-/usr/share/synapseos/dock.js}"
+
+mkdir -p "$(dirname "$FLAG")"
+if [[ -f "$FLAG" ]] && [[ "$(cat "$FLAG")" == "$VERSION" ]]; then
+    exit 0
+fi
+
+if [[ ! -f "$SCRIPT" ]]; then
+    exit 0
+fi
+
+# plasmashell exports this on the session bus after it is up.
+for _ in $(seq 1 40); do
+    if qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript \
+        "$(cat "$SCRIPT")" >/dev/null 2>&1 \
+        || qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript \
+        "$(cat "$SCRIPT")" >/dev/null 2>&1; then
+        printf '%s\n' "$VERSION" > "$FLAG"
+        exit 0
+    fi
+    sleep 0.5
+done
+
+exit 0

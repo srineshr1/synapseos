@@ -1,0 +1,6 @@
+/* Translucent menus / popovers so the compositor can blur behind them. */
+popover contents,
+popover.background,
+menu {
+  background-color: alpha(@theme_bg_color, 0.70);
+}

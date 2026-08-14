@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=SynapseOS dock
+Exec=env SYNAPSEOS_DOCK_JS=/home/ricky/Projects/SynapseOs/archiso/airootfs/usr/share/synapseos/dock.js /home/ricky/Projects/SynapseOs/.preview-home/.local/bin/synapseos-apply-dock
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=2
+NoDisplay=true

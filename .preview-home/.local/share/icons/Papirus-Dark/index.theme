@@ -1,0 +1,16 @@
+[Icon Theme]
+Name=Papirus-Dark overlay
+Inherits=Papirus-Dark
+Directories=scalable/apps,scalable/status
+
+[scalable/apps]
+Size=48
+Type=Scalable
+MinSize=8
+MaxSize=512
+
+[scalable/status]
+Size=24
+Type=Scalable
+MinSize=8
+MaxSize=512

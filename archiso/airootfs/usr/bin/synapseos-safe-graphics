@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Persist KWin safe-graphics mode.
+#
+#   synapseos-safe-graphics on      # KWIN_COMPOSE=Q everywhere (no blur)
+#   synapseos-safe-graphics off     # never apply Q
+#   synapseos-safe-graphics auto    # default: OpenGL (blur works)
+#   synapseos-safe-graphics status
+set -uo pipefail
+
+DIR=/etc/synapseos
+ON="$DIR/safe-graphics"
+OFF="$DIR/no-safe-graphics"
+
+usage() {
+    echo "usage: ${0##*/} {on|off|auto|status}" >&2
+    exit 2
+}
+
+need_root() {
+    if (( EUID != 0 )); then
+        echo "${0##*/}: needs root: sudo ${0##*/} $1" >&2
+        exit 1
+    fi
+}
+
+show_status() {
+    if [[ -e "$OFF" ]]; then
+        echo "mode: off  (workarounds disabled everywhere)"
+    elif [[ -e "$ON" ]]; then
+        echo "mode: on   (KWIN_COMPOSE=Q always)"
+    else
+        echo "mode: auto (OpenGL; boot safegfx or run 'on' if the desktop fails)"
+    fi
+    if command -v systemd-detect-virt > /dev/null; then
+        echo "virtualisation: $(systemd-detect-virt)"
+    fi
+    echo "in this shell:"
+    printf '  KWIN_COMPOSE=%s\n' "${KWIN_COMPOSE:-unset}"
+}
+
+case "${1:-status}" in
+    on)
+        need_root on
+        install -d -m 0755 "$DIR"
+        rm -f "$OFF"
+        : > "$ON"
+        echo "safe graphics: on. Log out and back in."
+        ;;
+    off)
+        need_root off
+        install -d -m 0755 "$DIR"
+        rm -f "$ON"
+        : > "$OFF"
+        echo "safe graphics: off. Log out and back in."
+        ;;
+    auto)
+        need_root auto
+        rm -f "$ON" "$OFF"
+        echo "safe graphics: auto. Log out and back in."
+        ;;
+    status) show_status ;;
+    *) usage ;;
+esac
