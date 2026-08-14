@@ -2,22 +2,20 @@
 desktop-image: "splash.png"
 desktop-color: "#181926"
 title-text: ""
-message-color: "#d8d2ea"
-terminal-box: "select_*.png"
+message-color: "#cad3f5"
 terminal-font: "DejaVu Sans Regular 24"
 
 + boot_menu {
-    left = 14%
+    left = 20%
     top = 48%
-    width = 72%
+    width = 60%
     height = 38%
     item_font = "DejaVu Sans Regular 24"
-    item_color = "#f4f0fc"
-    selected_item_color = "#ffffff"
-    selected_item_pixmap_style = "select_*.png"
-    item_height = 48
-    item_padding = 20
-    item_spacing = 8
+    item_color = "#a5adcb"
+    selected_item_color = "#c6a0f6"
+    item_height = 36
+    item_padding = 8
+    item_spacing = 6
     icon_width = 0
     icon_height = 0
     item_icon_space = 0
@@ -25,11 +23,11 @@ terminal-font: "DejaVu Sans Regular 24"
 
 + label {
     id = "__timeout__"
-    left = 14%
+    left = 20%
     top = 90%
-    width = 72%
+    width = 60%
     align = "center"
     text = "Booting in %d seconds"
-    color = "#a89bc4"
+    color = "#6e738d"
     font = "DejaVu Sans Regular 24"
 }

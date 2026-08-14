@@ -72,7 +72,7 @@ forceStripes=false
 groupingStrategy=0
 iconSpacing=0
 launchInPlace=true
-launchers=applications:org.kde.dolphin.desktop,applications:firefox.desktop,applications:org.kde.kate.desktop,applications:org.kde.konsole.desktop,applications:aether.desktop,applications:systemsettings.desktop
+launchers=applications:org.kde.dolphin.desktop,applications:firefox.desktop,applications:org.kde.kate.desktop,applications:kitty.desktop,applications:aether.desktop,applications:systemsettings.desktop
 maxStripes=1
 showOnlyCurrentDesktop=true
 

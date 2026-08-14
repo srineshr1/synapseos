@@ -1,0 +1,11 @@
+[Plymouth Theme]
+Name=SynapseOS
+Description=SynapseOS splash screen.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/synapseos
+ScriptFile=/usr/share/plymouth/themes/synapseos/synapseos.script
+ConsoleLogBackgroundColor=0x181926
+MonospaceFont=Cantarell 11
+Font=Cantarell 11

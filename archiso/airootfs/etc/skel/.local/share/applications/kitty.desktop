@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Kitty
+GenericName=Terminal
+Comment=GPU-based terminal
+TryExec=kitty
+Exec=kitty
+Icon=kitty
+Categories=System;TerminalEmulator;
+StartupNotify=true
+StartupWMClass=kitty
+X-KDE-Shortcuts=Ctrl+Alt+T
+Keywords=terminal;console;shell;kitty;

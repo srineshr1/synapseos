@@ -3,10 +3,10 @@
 # chosen for a normal disk boot. Calamares' grubcfg module updates
 # GRUB_DISTRIBUTOR and the kernel command line during installation.
 GRUB_DEFAULT="saved"
-GRUB_TIMEOUT=5
+GRUB_TIMEOUT=3
 GRUB_TIMEOUT_STYLE="menu"
 GRUB_DISTRIBUTOR="SynapseOS"
-GRUB_CMDLINE_LINUX_DEFAULT="quiet loglevel=3"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=0 systemd.show_status=false rd.udev.log_level=0 vt.global_cursor_default=0"
 GRUB_CMDLINE_LINUX=""
 GRUB_PRELOAD_MODULES="part_gpt part_msdos"
 GRUB_TERMINAL_INPUT="console"

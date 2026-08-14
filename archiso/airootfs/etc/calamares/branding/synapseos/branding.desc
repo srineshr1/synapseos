@@ -5,8 +5,6 @@ componentName: synapseos
 # Generic welcome wording ("Welcome to the SynapseOS installer"), not
 # "Welcome to the Calamares installer for …".
 welcomeStyleCalamares: false
-# Do not scale productWelcome up to the whole page — that is what put the
-# giant lettering over the language picker and the Next/Cancel buttons.
 welcomeExpandingLogo: false
 windowExpanding: normal
 windowSize: 1100px,680px
@@ -31,23 +29,17 @@ strings:
   releaseNotesUrl: https://github.com/SynapseOs
   donateUrl: ""
   productWelcome: >-
-    Welcome to the SynapseOS installer. SynapseOS is an Arch Linux based
-    distribution with a compact Catppuccin Macchiato Plasma desktop. This
-    installer copies the live system to your disk and sets up the
-    bootloader, your user account and networking for you.
+    This installer copies the live system to your disk and sets up the
+    bootloader, your user account and networking.
 
 # --- Images -----------------------------------------------------------------
-# productBanner   64px-tall header on the welcome page (optional)
 # productIcon     window icon
 # productLogo     80x80 mark at the top of the sidebar
-# productWelcome  image under the welcome text; keep it small (see gen-branding)
-# productWallpaper is intentionally omitted: Calamares tiles it under every
-# page, and a 1920x1080 wordmark covered the buttons.
+# productBanner and productWelcome are omitted so the mark is not repeated.
+# productWallpaper is omitted: Calamares tiles it under every page.
 images:
-  productBanner: "banner.png"
   productIcon: "icon.png"
   productLogo: "logo.png"
-  productWelcome: "welcome.png"
 
 # --- Slideshow --------------------------------------------------------------
 slideshow: "slideshow/SynapseOS.qml"
@@ -59,5 +51,5 @@ slideshowAPI: 2
 style:
   SidebarBackground: "#1e2030"
   SidebarText: "#a5adcb"
-  SidebarBackgroundCurrent: "#c6a0f6"
-  SidebarTextCurrent: "#181926"
+  SidebarBackgroundCurrent: "#24273a"
+  SidebarTextCurrent: "#c6a0f6"

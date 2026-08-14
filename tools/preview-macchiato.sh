@@ -62,7 +62,7 @@ cp -a "$AI/etc/skel/.local/." "$PREVIEW/.local/"
 
 # Desktop files so Icon Tasks can resolve icons in this isolated home.
 mkdir -p "$PREVIEW/.local/share/applications"
-for desk in org.kde.dolphin firefox org.kde.kate org.kde.gwenview org.kde.konsole systemsettings; do
+for desk in org.kde.dolphin firefox org.kde.kate org.kde.gwenview kitty org.kde.konsole systemsettings; do
     if [[ -f /usr/share/applications/${desk}.desktop ]]; then
         cp /usr/share/applications/${desk}.desktop "$PREVIEW/.local/share/applications/"
     fi

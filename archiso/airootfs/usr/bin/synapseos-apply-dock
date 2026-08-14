@@ -3,7 +3,7 @@
 set -euo pipefail
 
 FLAG="${XDG_CONFIG_HOME:-$HOME/.config}/synapseos/dock-version"
-VERSION=9
+VERSION=10
 SCRIPT="${SYNAPSEOS_DOCK_JS:-/usr/share/synapseos/dock.js}"
 
 mkdir -p "$(dirname "$FLAG")"

@@ -320,6 +320,22 @@ class DesktopConfigTests(unittest.TestCase):
             "org.kde.konsole.desktop"
         ).read_text(encoding="utf-8")
         self.assertIn("--profile SynapseOS.profile", desk)
+        self.assertIn("NoDisplay=true", desk)
+        kitty_conf = (
+            ROOT / "archiso/airootfs/etc/skel/.config/kitty/kitty.conf"
+        ).read_text(encoding="utf-8")
+        self.assertIn("background_opacity 0.78", kitty_conf)
+        self.assertIn("JetBrainsMono Nerd Font Mono", kitty_conf)
+        kde = ROOT / "archiso/airootfs/etc/skel/.config/kdeglobals"
+        self.assertIn("TerminalApplication=kitty", kde.read_text(encoding="utf-8"))
+        rules = (
+            ROOT / "archiso/airootfs/etc/skel/.config/kwinrulesrc"
+        ).read_text(encoding="utf-8")
+        # Browsers must be listed before the catch-all or they stay translucent.
+        self.assertIn(
+            "rules=a11e0001-5e0f-4b10-9c0d-000000000002,a11e0001-5e0f-4b10-9c0d-000000000003,a11e0001-5e0f-4b10-9c0d-000000000001",
+            rules,
+        )
         chrome = ROOT / "archiso/airootfs/usr/bin/synapseos-apply-chrome"
         self.assertTrue(chrome.is_file())
 
@@ -344,6 +360,110 @@ class DesktopConfigTests(unittest.TestCase):
             ROOT / "archiso/airootfs/root/customize_airootfs.sh"
         ).read_text(encoding="utf-8")
         self.assertIn("aether.desktop", custom)
+
+    def test_plymouth_is_wired(self) -> None:
+        pkgs = (ROOT / "archiso/packages.x86_64").read_text(encoding="utf-8")
+        self.assertRegex(pkgs, r"(?m)^plymouth$")
+        hooks = (
+            ROOT / "archiso/airootfs/etc/mkinitcpio.conf.d/archiso.conf"
+        ).read_text(encoding="utf-8")
+        self.assertRegex(hooks, r"HOOKS=\(.*\budev plymouth\b")
+        ply = ROOT / "archiso/airootfs/usr/share/plymouth/themes/synapseos"
+        self.assertTrue((ply / "synapseos.plymouth").is_file())
+        self.assertTrue((ply / "synapseos.script").is_file())
+        self.assertTrue((ply / "logo.png").is_file())
+        conf = (
+            ROOT / "archiso/airootfs/etc/plymouth/plymouthd.conf"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Theme=synapseos", conf)
+        settings = (
+            ROOT / "archiso/airootfs/etc/calamares/settings.conf"
+        ).read_text(encoding="utf-8")
+        self.assertIn("shellprocess@plymouth", settings)
+        inject = ROOT / "archiso/airootfs/usr/share/synapseos/inject-plymouth.sh"
+        self.assertTrue(inject.is_file())
+
+    def test_quiet_splash_is_the_default_boot(self) -> None:
+        grub = (ROOT / "archiso/grub/grub.cfg").read_text(encoding="utf-8")
+        default_block = grub.split("menuentry \"SynapseOS\"", 1)[1].split("submenu", 1)[0]
+        self.assertIn("quiet", default_block)
+        self.assertIn("splash", default_block)
+        self.assertNotIn("safegfx", default_block)
+        self.assertIn("timeout=5", grub)
+        self.assertNotIn("selected_item_pixmap_style", grub)
+        theme = (ROOT / "archiso/grub/theme/theme.txt").read_text(encoding="utf-8")
+        self.assertNotIn("selected_item_pixmap_style", theme)
+        installed = (
+            ROOT / "archiso/airootfs/etc/default/grub"
+        ).read_text(encoding="utf-8")
+        self.assertIn("quiet splash", installed)
+        self.assertIn('GRUB_TIMEOUT=3', installed)
+        grubcfg = (
+            ROOT / "archiso/airootfs/etc/calamares/modules/grubcfg.conf"
+        ).read_text(encoding="utf-8")
+        self.assertIn('"splash"', grubcfg)
+        self.assertIn("GRUB_TIMEOUT: 3", grubcfg)
+
+    def test_sddm_and_ksplash_are_synapseos(self) -> None:
+        sddm = (
+            ROOT / "archiso/airootfs/etc/sddm.conf.d/10-synapseos.conf"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Current=synapseos", sddm)
+        main = (
+            ROOT / "archiso/airootfs/usr/share/sddm/themes/synapseos/Main.qml"
+        ).read_text(encoding="utf-8")
+        self.assertIn('color: "#181926"', main)
+        self.assertIn("sddm.login", main)
+        self.assertTrue(
+            (
+                ROOT
+                / "archiso/airootfs/usr/share/sddm/themes/synapseos/logo.png"
+            ).is_file()
+        )
+        defaults = (
+            ROOT
+            / "archiso/airootfs/usr/share/plasma/look-and-feel/"
+            "Catppuccin-Macchiato-Mauve/contents/defaults"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Theme=Catppuccin-Macchiato-Mauve", defaults)
+        self.assertNotIn("Catppuccin-Macchiato-Mauve-splash", defaults)
+        splash = (
+            ROOT
+            / "archiso/airootfs/usr/share/plasma/look-and-feel/"
+            "Catppuccin-Macchiato-Mauve/contents/splash/Splash.qml"
+        )
+        self.assertTrue(splash.is_file())
+
+    def test_installed_system_gets_a_real_pacman_keyring(self) -> None:
+        post = (
+            ROOT / "archiso/airootfs/usr/share/synapseos/postinstall.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn("pacman-key --init", post)
+        self.assertIn("pacman-key --populate archlinux", post)
+        # Must rebuild the keyring *after* the live tmpfs unit is removed,
+        # otherwise we populate a directory that is about to vanish.
+        self.assertLess(
+            post.index("etc-pacman.d-gnupg.mount"),
+            post.index("pacman-key --init"),
+        )
+        self.assertLess(
+            post.index("pacman-key --init"),
+            post.index("pacman -Rns --noconfirm calamares"),
+        )
+        pkgs = (ROOT / "archiso/packages.x86_64").read_text(encoding="utf-8")
+        self.assertRegex(pkgs, r"(?m)^obs-studio$")
+
+    def test_calamares_branding_is_one_mark(self) -> None:
+        desc = (
+            ROOT / "archiso/airootfs/etc/calamares/branding/synapseos/branding.desc"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("welcome.png", desc)
+        self.assertNotIn("banner.png", desc)
+        self.assertIn("productLogo: \"logo.png\"", desc)
+        welcome = (
+            ROOT / "archiso/airootfs/etc/calamares/modules/welcome.conf"
+        ).read_text(encoding="utf-8")
+        self.assertIn("showSupportUrl: false", welcome)
 
 
 if __name__ == "__main__":

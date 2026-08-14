@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Regenerate SynapseOS branding art.
 
-Covers Calamares art, the installer icon, the live GRUB theme, the
-syslinux (BIOS) splash, the installed GRUB theme, and the desktop
-wallpaper.
+Covers Calamares art, the installer icon, the live and installed GRUB
+themes, the syslinux splash, Plymouth / SDDM / KSplash assets, and the
+desktop wallpaper.
 
-All lettering is measured and drawn with Pillow so nothing is clipped
-or misspelled. Atmosphere is generated procedurally (seeded) so the
-script stays reproducible.
+Boot, splash and login stay a solid Macchiato field plus one mark — no
+nebula, no credits. Atmosphere is only the desktop-wallpaper fallback.
 
 Usage:  python3 tools/gen-branding.py
 Requires: python-pillow
@@ -33,6 +32,13 @@ GRUB_THEME = ROOT / "archiso/grub/theme"
 INSTALLED_THEME = ROOT / "archiso/airootfs/usr/share/grub/themes/synapseos"
 SYSLINUX = ROOT / "archiso/syslinux"
 SOURCE = ROOT / "archiso/branding"
+PLYMOUTH = ROOT / "archiso/airootfs/usr/share/plymouth/themes/synapseos"
+SDDM = ROOT / "archiso/airootfs/usr/share/sddm/themes/synapseos"
+KSPLASH = (
+    ROOT
+    / "archiso/airootfs/usr/share/plasma/look-and-feel"
+    / "Catppuccin-Macchiato-Mauve/contents/splash/images"
+)
 
 # Catppuccin Macchiato. Never pure #000.
 VOID = (24, 25, 38)          # crust
@@ -48,6 +54,9 @@ SELECT_BG = (198, 160, 246)
 CREDIT_LINE = "Made by Srinesh, Vashista, Vishnu"
 BASED_LINE = "Based on Arch"
 WORDMARK = "SynapseOS"
+ENTRY_SIZE = (286, 48)
+PROGRESS_SIZE = (300, 10)
+LOCK_CANVAS = (84, 96)
 MENU_FONT = "DejaVu Sans Regular 24"
 MENU_FONT_FILE = "dejavu_24.pf2"
 MENU_FONT_SIZE = 24
@@ -459,28 +468,17 @@ def desktop_wallpaper(path: Path, size=(1920, 1080)) -> None:
     img.convert("RGB").save(path, optimize=True)
 
 
-def slide(path: Path, number: str, heading: str, body: str, size=(1280, 720)) -> None:
-    img = atmosphere(size, variant="desktop", seed=7 + int(number)).convert("RGBA")
-    # Dim a readable column on the left without a hard card.
-    strip = Image.new("L", (size[0], 1), 0)
-    sp = strip.load()
-    col = int(size[0] * 0.72)
-    for x in range(col):
-        t = 1.0 - (x / col) ** 1.6
-        sp[x, 0] = clamp_byte(175 * t)
-    shade = strip.resize(size, Image.Resampling.BILINEAR)
-    img = Image.composite(Image.new("RGBA", size, (*VOID, 255)), img, shade)
-
+def slide(path: Path, heading: str, body: str, size=(1280, 720)) -> None:
+    """Solid field, one mark, one heading. Used as the Calamares slideshow."""
+    img = Image.new("RGB", size, VOID)
+    mark = geometric_s(72, fg=(MARK_GLOW, MARK))
+    img.paste(mark, (88, 88), mark)
     draw = ImageDraw.Draw(img)
-    margin = 88
-    num_font = load_font("display", 18)
-    head_font = fitted_font(draw, heading, "display", 58, size[0] * 0.62)
-    draw.text((margin, 168), number, font=num_font, fill=MARK_GLOW)
-    draw_tracked(draw, (margin, 210 + head_font.size), heading, head_font, TEXT, tracking=0.3, anchor="ls")
-
-    body_font = load_font("regular", 24)
+    head_font = fitted_font(draw, heading, "display", 48, size[0] * 0.7)
+    body_font = load_font("regular", 22)
+    draw_tracked(draw, (88, 260), heading, head_font, TEXT, tracking=0.4, anchor="ls")
     words, lines, line = body.split(), [], ""
-    inner = int(size[0] * 0.56)
+    inner = int(size[0] * 0.62)
     for word in words:
         probe = f"{line} {word}".strip()
         if draw.textlength(probe, font=body_font) <= inner:
@@ -489,16 +487,11 @@ def slide(path: Path, number: str, heading: str, body: str, size=(1280, 720)) ->
             lines.append(line)
             line = word
     lines.append(line)
-    y = 210 + head_font.size + 28
-    for text_line in lines[:5]:
-        draw.text((margin, y), text_line, font=body_font, fill=MUTED)
-        y += 36
-
-    draw.rounded_rectangle([margin, y + 22, margin + 72, y + 26], radius=2, fill=MARK)
-
-    badge = glow_behind(geometric_s(72, fg=(MARK_GLOW, MARK)), spread=0.30, strength=0.7)
-    img.paste(badge, (size[0] - badge.width - 56, 48), badge)
-    img.convert("RGB").save(path)
+    y = 260 + head_font.size + 24
+    for text_line in lines[:4]:
+        draw.text((88, y), text_line, font=body_font, fill=MUTED)
+        y += 34
+    img.save(path)
 
 
 # --- Boot ---------------------------------------------------------------------
@@ -508,22 +501,20 @@ THEME_TXT = f"""\
 desktop-image: "splash.png"
 desktop-color: "{VOID_HEX}"
 title-text: ""
-message-color: "#d8d2ea"
-terminal-box: "select_*.png"
+message-color: "#cad3f5"
 terminal-font: "DejaVu Sans Regular 24"
 
 + boot_menu {{
-    left = 14%
+    left = 20%
     top = 48%
-    width = 72%
+    width = 60%
     height = 38%
     item_font = "DejaVu Sans Regular 24"
-    item_color = "#f4f0fc"
-    selected_item_color = "#ffffff"
-    selected_item_pixmap_style = "select_*.png"
-    item_height = 48
-    item_padding = 20
-    item_spacing = 8
+    item_color = "#a5adcb"
+    selected_item_color = "#c6a0f6"
+    item_height = 36
+    item_padding = 8
+    item_spacing = 6
     icon_width = 0
     icon_height = 0
     item_icon_space = 0
@@ -531,54 +522,69 @@ terminal-font: "DejaVu Sans Regular 24"
 
 + label {{
     id = "__timeout__"
-    left = 14%
+    left = 20%
     top = 90%
-    width = 72%
+    width = 60%
     align = "center"
     text = "Booting in %d seconds"
-    color = "#a89bc4"
+    color = "#6e738d"
     font = "DejaVu Sans Regular 24"
 }}
 """
 
 
+def brand_mark(size: int) -> Image.Image:
+    return geometric_s(size, fg=(MARK_GLOW, MARK))
+
+
+def wordmark_logo(mark_size: int = 96, title_size: int = 56) -> Image.Image:
+    """Horizontal S + SynapseOS on a transparent field. Shared by Plymouth/SDDM."""
+    mark = brand_mark(mark_size)
+    probe = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(probe)
+    title = load_font("display", title_size)
+    text_w = int(draw.textlength(WORDMARK, font=title))
+    gap = max(16, mark_size // 5)
+    pad_x, pad_y = 8, 8
+    width = pad_x * 2 + mark.width + gap + text_w
+    height = pad_y * 2 + max(mark.height, title_size + 8)
+    img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    img.paste(mark, (pad_x, (height - mark.height) // 2), mark)
+    ImageDraw.Draw(img).text(
+        (pad_x + mark.width + gap, height / 2 + title_size * 0.12),
+        WORDMARK,
+        font=title,
+        fill=(*TEXT, 255),
+        anchor="ls",
+    )
+    return img
+
+
 def boot_splash(path: Path, size: tuple[int, int]) -> Image.Image:
-    """Atmosphere, mark, wordmark, credits. Menu lives in the quiet lower half."""
-    img = atmosphere(size, variant="boot", seed=3).convert("RGBA")
+    """Solid crust, small mark and wordmark. Menu lives in the empty lower half."""
+    img = Image.new("RGB", size, VOID)
     width, height = size
     scale = width / 1920
-
-    mark_size = max(72, int(188 * scale))
-    mark = glow_behind(geometric_s(mark_size, fg=(MARK_GLOW, MARK)), spread=0.38, strength=0.85)
-    mx = (width - mark.width) // 2
-    my = max(20, int(56 * scale))
-    img.paste(mark, (mx, my), mark)
-
+    mark_size = max(56, int(88 * scale))
+    mark = brand_mark(mark_size)
     draw = ImageDraw.Draw(img)
-    title = fitted_font(draw, WORDMARK, "display", max(28, int(54 * scale)), width * 0.78)
-    based = fitted_font(draw, BASED_LINE, "medium", max(18, int(22 * scale)), width * 0.78)
-    credit = fitted_font(draw, CREDIT_LINE, "regular", max(14, int(17 * scale)), width * 0.90)
-
-    text_y = my + mark.height + int(8 * scale)
-    draw_tracked(draw, (width / 2, text_y), WORDMARK, title, TEXT, tracking=1.6 * scale, anchor="mt")
-    title_h = title.size
-    draw.text(
-        (width / 2, text_y + title_h + int(8 * scale)),
-        BASED_LINE,
-        font=based,
-        fill=MUTED,
-        anchor="mt",
+    title = fitted_font(draw, WORDMARK, "display", max(22, int(36 * scale)), width * 0.6)
+    top = max(24, int(height * 0.14))
+    paste_center(img, mark, width / 2, top + mark.height / 2)
+    # Baseline well below the mark. "ms" is middle + baseline — do not use "mt",
+    # which leaves the wordmark sitting on the S.
+    baseline = top + mark.height + int(14 * scale) + title.size
+    draw_tracked(
+        draw,
+        (width / 2, baseline),
+        WORDMARK,
+        title,
+        TEXT,
+        tracking=1.2 * scale,
+        anchor="ms",
     )
-    draw.text(
-        (width / 2, text_y + title_h + based.size + int(20 * scale)),
-        CREDIT_LINE,
-        font=credit,
-        fill=DIM,
-        anchor="mt",
-    )
-    rgb = img.convert("RGB")
-    rgb.save(path)
-    return rgb
+    img.save(path)
+    return img
 
 
 def syslinux_splash(path: Path) -> None:
@@ -641,7 +647,8 @@ def write_theme(directory: Path, splash: Path, font: Path) -> None:
     if font.resolve() != font_dest.resolve():
         copy2(font, font_dest)
     (directory / "theme.txt").write_text(THEME_TXT)
-    write_select_slices(directory)
+    for leftover in directory.glob("select_*.png"):
+        leftover.unlink()
 
 
 def write_cosmic_bg_config(skel: Path) -> None:
@@ -680,6 +687,85 @@ def write_wallpaper_xml(path: Path) -> None:
     )
 
 
+def padlock(size: tuple[int, int], color) -> Image.Image:
+    """Shackle-and-body lock on an 84x96 canvas."""
+    w, h = size
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    body_w, body_h = int(w * 0.70), int(h * 0.42)
+    body_x = (w - body_w) // 2
+    body_y = int(h * 0.50)
+    draw.rounded_rectangle(
+        [body_x, body_y, body_x + body_w - 1, body_y + body_h - 1],
+        radius=max(5, body_w // 7),
+        fill=(*color, 255),
+    )
+    sw = max(7, w // 9)
+    sh_w = int(body_w * 0.62)
+    sh_x0 = (w - sh_w) // 2
+    sh_x1 = sh_x0 + sh_w
+    sh_top = int(h * 0.10)
+    # Full upside-down U: arc plus two legs that meet the body.
+    draw.arc([sh_x0, sh_top, sh_x1, sh_top + sh_w], 180, 360, fill=(*color, 255), width=sw)
+    draw.line(
+        [(sh_x0 + sw // 2, sh_top + sh_w // 2), (sh_x0 + sw // 2, body_y + 1)],
+        fill=(*color, 255),
+        width=sw,
+    )
+    draw.line(
+        [(sh_x1 - sw // 2, sh_top + sh_w // 2), (sh_x1 - sw // 2, body_y + 1)],
+        fill=(*color, 255),
+        width=sw,
+    )
+    return img
+
+
+def entry_field(size: tuple[int, int], border) -> Image.Image:
+    w, h = size
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.rounded_rectangle([0, 0, w - 1, h - 1], radius=8, fill=(*SURFACE, 255), outline=(*border, 255), width=2)
+    return img
+
+
+def bullet_dot(size: int = 14) -> Image.Image:
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    inset = 3
+    draw.ellipse([inset, inset, size - 1 - inset, size - 1 - inset], fill=(*TEXT, 255))
+    return img
+
+
+def progress_bar(size: tuple[int, int], fill) -> Image.Image:
+    img = Image.new("RGB", size, fill)
+    return img
+
+
+def write_plymouth_assets(directory: Path) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    wordmark_logo().save(directory / "logo.png")
+    padlock(LOCK_CANVAS, MARK).save(directory / "lock.png")
+    entry_field(ENTRY_SIZE, MARK).save(directory / "entry.png")
+    bullet_dot().save(directory / "bullet.png")
+    progress_bar(PROGRESS_SIZE, MARK).save(directory / "progress_bar.png")
+    progress_bar(PROGRESS_SIZE, (54, 58, 79)).save(directory / "progress_box.png")
+
+
+def write_sddm_assets(directory: Path) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    wordmark_logo().save(directory / "logo.png")
+    padlock(LOCK_CANVAS, MARK).save(directory / "lock.png")
+    padlock(LOCK_CANVAS, (237, 135, 150)).save(directory / "lock-failed.png")
+    entry_field(ENTRY_SIZE, MARK).save(directory / "entry.png")
+    entry_field(ENTRY_SIZE, (237, 135, 150)).save(directory / "entry-failed.png")
+    bullet_dot().save(directory / "bullet.png")
+
+
+def write_ksplash_mark(directory: Path) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    brand_mark(160).save(directory / "mark.png")
+
+
 def installer_mockup(path: Path) -> None:
     """Static chrome preview of the Calamares window using brand colours."""
     w, h = 1100, 680
@@ -701,19 +787,19 @@ def installer_mockup(path: Path) -> None:
     y = 124
     for current, label in steps:
         if current:
-            draw.rounded_rectangle([12, y, sidebar_w - 12, y + 36], radius=8, fill=MARK)
-            draw.text((28, y + 18), label, font=nav_font, fill=(255, 255, 255), anchor="lm")
+            draw.rounded_rectangle([12, y, sidebar_w - 12, y + 36], radius=8, fill=(36, 39, 58))
+            draw.rectangle([12, y + 8, 16, y + 28], fill=MARK)
+            draw.text((28, y + 18), label, font=nav_font, fill=MARK, anchor="lm")
         else:
             draw.text((28, y + 18), label, font=nav_font, fill=MUTED, anchor="lm")
         y += 44
 
-    welcome_img = Image.open(BRANDING / "welcome.png")
-    img.paste(welcome_img, (sidebar_w + 48, 48))
+    mark = brand_mark(72)
+    img.paste(mark, (sidebar_w + 48, 56), mark)
+    title = load_font("display", 28)
+    draw_tracked(draw, (sidebar_w + 48 + mark.width + 16, 56 + mark.height / 2 + 10), WORDMARK, title, TEXT, tracking=0.6, anchor="ls")
     body = load_font("regular", 15)
-    intro = (
-        "Welcome to the SynapseOS installer. SynapseOS is an Arch Linux based "
-        "distribution with a compact Catppuccin Macchiato Plasma desktop."
-    )
+    intro = "This installer copies the live system to your disk and sets up the bootloader and your account."
     # wrap
     words, lines, line = intro.split(), [], ""
     max_w = w - sidebar_w - 96
@@ -725,7 +811,7 @@ def installer_mockup(path: Path) -> None:
             lines.append(line)
             line = word
     lines.append(line)
-    ty = 48 + welcome_img.height + 20
+    ty = 56 + mark.height + 28
     for text_line in lines:
         draw.text((sidebar_w + 48, ty), text_line, font=body, fill=MUTED)
         ty += 22
@@ -753,12 +839,27 @@ def installer_mockup(path: Path) -> None:
 def preview_sheet(path: Path) -> None:
     """Contact sheet so a human can judge the system at a glance."""
     installer_mockup(SOURCE / "installer-mock.png")
+    plymouth_preview = Image.new("RGB", (640, 360), VOID)
+    ply_logo = Image.open(PLYMOUTH / "logo.png").convert("RGBA")
+    scale = min(480 / ply_logo.width, 80 / ply_logo.height)
+    ply_logo = ply_logo.resize((max(1, int(ply_logo.width * scale)), max(1, int(ply_logo.height * scale))), Image.Resampling.LANCZOS)
+    paste_center(plymouth_preview, ply_logo, 320, 150)
+    bar = Image.open(PLYMOUTH / "progress_bar.png").resize((240, 8), Image.Resampling.NEAREST)
+    plymouth_preview.paste(bar, (200, 230))
+
+    login_preview = Image.new("RGB", (640, 360), VOID)
+    paste_center(login_preview, ply_logo, 320, 120)
+    entry = Image.open(SDDM / "entry.png").convert("RGBA")
+    lock = Image.open(SDDM / "lock.png").convert("RGBA").resize((22, 26), Image.Resampling.LANCZOS)
+    login_preview.paste(entry, (177, 200), entry)
+    login_preview.paste(lock, (148, 211), lock)
+
     cells = [
         ("Boot", Image.open(GRUB_THEME / "splash.png").resize((640, 360), Image.Resampling.LANCZOS)),
-        ("Desktop", Image.open(BACKGROUNDS / "desktop.png").resize((640, 360), Image.Resampling.LANCZOS)),
+        ("Plymouth", plymouth_preview),
         ("Installer", Image.open(SOURCE / "installer-mock.png").resize((640, 395), Image.Resampling.LANCZOS)),
+        ("Login", login_preview),
         ("Slide 1", Image.open(SLIDES / "slide1.png").resize((640, 360), Image.Resampling.LANCZOS)),
-        ("Welcome", Image.open(BRANDING / "welcome.png")),
         ("Icon", Image.open(PIXMAPS / "synapseos-installer.png").resize((180, 180), Image.Resampling.LANCZOS)),
     ]
     pad, label_h, gap = 28, 28, 20
@@ -791,41 +892,43 @@ def preview_sheet(path: Path) -> None:
 
 
 def main() -> None:
-    for directory in (BRANDING, SLIDES, PIXMAPS, BACKGROUNDS, GRUB_THEME, INSTALLED_THEME, SOURCE):
+    for directory in (
+        BRANDING,
+        SLIDES,
+        PIXMAPS,
+        BACKGROUNDS,
+        GRUB_THEME,
+        INSTALLED_THEME,
+        SOURCE,
+        PLYMOUTH,
+        SDDM,
+        KSPLASH,
+    ):
         directory.mkdir(parents=True, exist_ok=True)
 
-    welcome(BRANDING / "welcome.png")
     logo(BRANDING / "logo.png", 256)
     logo(BRANDING / "icon.png", 64)
     app_icon(PIXMAPS / "synapseos-installer.png", 256)
-    banner(BRANDING / "banner.png")
     desktop_wallpaper(BACKGROUNDS / "desktop.png")
     write_wallpaper_xml(BACKGROUNDS / "synapseos.xml")
     props = ROOT / "archiso/airootfs/usr/share/gnome-background-properties"
     props.mkdir(parents=True, exist_ok=True)
     write_wallpaper_xml(props / "synapseos.xml")
-    # Plasma wallpaper is set from appletsrc, not COSMIC config.
 
     slide(
         SLIDES / "slide1.png",
-        "01",
         "A fresh start",
-        "SynapseOS brings a compact Catppuccin Plasma desktop to Arch Linux, "
-        "with sensible defaults and nothing in your way.",
+        "A compact Catppuccin Plasma desktop, ready the moment the installer finishes.",
     )
     slide(
         SLIDES / "slide2.png",
-        "02",
-        "Fast and offline",
-        "Everything you see in the live session is copied straight to your "
-        "disk. No downloads, no waiting on mirrors.",
+        "Copied, not downloaded",
+        "The live system is written straight to your disk. No extra packages, no waiting on mirrors.",
     )
     slide(
         SLIDES / "slide3.png",
-        "03",
         "Yours to shape",
-        "Arch underneath means pacman, the AUR and the whole Arch Wiki are "
-        "available from day one.",
+        "pacman, the AUR and the Arch Wiki are there from the first reboot.",
     )
 
     geometric_s(1024, fg=(MARK_GLOW, MARK_DEEP), bg=VOID).save(SOURCE / "mark.png")
@@ -838,11 +941,21 @@ def main() -> None:
     write_theme(INSTALLED_THEME, live_splash, menu_font)
     syslinux_splash(SYSLINUX / "splash.png")
 
+    write_plymouth_assets(PLYMOUTH)
+    write_sddm_assets(SDDM)
+    write_ksplash_mark(KSPLASH)
+
+    for leftover in (BRANDING / "welcome.png", BRANDING / "banner.png"):
+        if leftover.exists():
+            leftover.unlink()
+
     preview_sheet(SOURCE / "preview.png")
 
     print("branding art written to", BRANDING)
     print("desktop wallpaper written to", BACKGROUNDS)
     print("GRUB theme written to", GRUB_THEME, "and", INSTALLED_THEME)
+    print("plymouth theme written to", PLYMOUTH)
+    print("sddm theme assets written to", SDDM)
     print("syslinux splash written to", SYSLINUX / "splash.png")
     print("preview sheet written to", SOURCE / "preview.png")
 

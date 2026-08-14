@@ -4,10 +4,12 @@
 set -euo pipefail
 
 FLAG="${XDG_CONFIG_HOME:-$HOME/.config}/synapseos/chrome-version"
-VERSION=5
+VERSION=6
 RULE_WINDOWS=a11e0001-5e0f-4b10-9c0d-000000000001
 RULE_BROWSERS=a11e0001-5e0f-4b10-9c0d-000000000002
-BROWSER_RE='firefox|firefox-esr|Google-chrome|chromium|brave-browser|helium|helium-browser|librewolf|zen|vivaldi-stable|msedge|opera|org.mozilla.firefox'
+RULE_TERMINALS=a11e0001-5e0f-4b10-9c0d-000000000003
+BROWSER_RE='firefox|firefox-esr|Google-chrome|chromium|brave-browser|helium|helium-browser|librewolf|zen|vivaldi-stable|msedge|opera|org.mozilla.firefox|Navigator'
+TERMINAL_RE='kitty|konsole|Alacritty|org.kde.konsole'
 BROWSER_CLASSES='/firefox|firefox-esr|google-chrome|chromium|brave-browser|helium|helium-browser|librewolf|zen|vivaldi-stable|msedge|opera|org.mozilla.firefox/'
 
 kw() {
@@ -50,19 +52,9 @@ kw --file kwinrc --group Effect-better-blur-dx --key WindowClasses "$BROWSER_CLA
 kw --file kwinrc --group Compositing --key OpenGLIsUnsafe false
 kw --file breezerc --group Style --key MenuOpacity 70
 
-# Window opacity (Hyprland-style). Keys are lowercase — KWin ignores
-# opacityactiveRule. Only ~/.config/kwinrulesrc is read (NoGlobals).
-kw --file kwinrulesrc --group General --key count 2
-kw --file kwinrulesrc --group General --key rules "${RULE_WINDOWS},${RULE_BROWSERS}"
-kw --file kwinrulesrc --group "$RULE_WINDOWS" --key Description "SynapseOS translucent windows"
-kw --file kwinrulesrc --group "$RULE_WINDOWS" --key Enabled true
-kw --file kwinrulesrc --group "$RULE_WINDOWS" --key opacityactive 98
-kw --file kwinrulesrc --group "$RULE_WINDOWS" --key opacityactiverule 2
-kw --file kwinrulesrc --group "$RULE_WINDOWS" --key opacityinactive 80
-kw --file kwinrulesrc --group "$RULE_WINDOWS" --key opacityinactiverule 2
-kw --file kwinrulesrc --group "$RULE_WINDOWS" --key types 1
-kw --file kwinrulesrc --group "$RULE_WINDOWS" --key wmclass ""
-kw --file kwinrulesrc --group "$RULE_WINDOWS" --key wmclassmatch 0
+# First matching rule wins. Browsers must be listed before the catch-all.
+kw --file kwinrulesrc --group General --key count 3
+kw --file kwinrulesrc --group General --key rules "${RULE_BROWSERS},${RULE_TERMINALS},${RULE_WINDOWS}"
 kw --file kwinrulesrc --group "$RULE_BROWSERS" --key Description "Opaque browsers"
 kw --file kwinrulesrc --group "$RULE_BROWSERS" --key Enabled true
 kw --file kwinrulesrc --group "$RULE_BROWSERS" --key opacityactive 100
@@ -73,9 +65,30 @@ kw --file kwinrulesrc --group "$RULE_BROWSERS" --key wmclass "$BROWSER_RE"
 kw --file kwinrulesrc --group "$RULE_BROWSERS" --key wmclasscomplete false
 kw --file kwinrulesrc --group "$RULE_BROWSERS" --key wmclassmatch 3
 kw --file kwinrulesrc --group "$RULE_BROWSERS" --key types 1
+kw --file kwinrulesrc --group "$RULE_TERMINALS" --key Description "Translucent terminals"
+kw --file kwinrulesrc --group "$RULE_TERMINALS" --key Enabled true
+kw --file kwinrulesrc --group "$RULE_TERMINALS" --key opacityactive 78
+kw --file kwinrulesrc --group "$RULE_TERMINALS" --key opacityactiverule 2
+kw --file kwinrulesrc --group "$RULE_TERMINALS" --key opacityinactive 62
+kw --file kwinrulesrc --group "$RULE_TERMINALS" --key opacityinactiverule 2
+kw --file kwinrulesrc --group "$RULE_TERMINALS" --key wmclass "$TERMINAL_RE"
+kw --file kwinrulesrc --group "$RULE_TERMINALS" --key wmclasscomplete false
+kw --file kwinrulesrc --group "$RULE_TERMINALS" --key wmclassmatch 3
+kw --file kwinrulesrc --group "$RULE_TERMINALS" --key types 1
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key Description "SynapseOS translucent windows"
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key Enabled true
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key opacityactive 98
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key opacityactiverule 2
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key opacityinactive 80
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key opacityinactiverule 2
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key types 1
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key wmclass ""
+kw --file kwinrulesrc --group "$RULE_WINDOWS" --key wmclassmatch 0
 
 UI='JetBrainsMono Nerd Font Propo,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'
 MONO='JetBrainsMono Nerd Font Mono,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1'
+kw --file kdeglobals --group General --key TerminalApplication kitty
+kw --file kdeglobals --group General --key TerminalService kitty.desktop
 kw --file kdeglobals --group General --key font "$UI"
 kw --file kdeglobals --group General --key menuFont "$UI"
 kw --file kdeglobals --group General --key toolBarFont "$UI"

@@ -128,12 +128,20 @@ if [[ -d "$_icon_src" ]]; then
 fi
 unset _icon_src _theme _dir _name
 
-# Clean Konsole: no tab/split toolbar, always the SynapseOS profile (fonts).
+# Kitty is the default terminal. Hide Konsole from menus so Ctrl+Alt+T
+# and "Open Terminal" cannot bring the chrome bar back.
 if [[ -f /usr/share/applications/org.kde.konsole.desktop ]]; then
     sed -i \
         -e 's|^Exec=konsole$|Exec=konsole --hide-menubar --hide-toolbars --hide-tabbar --profile SynapseOS.profile|' \
         -e 's|^Exec=konsole --new-tab$|Exec=konsole --new-tab --profile SynapseOS.profile|' \
+        -e '/^X-KDE-Shortcuts=/d' \
         /usr/share/applications/org.kde.konsole.desktop
+    grep -q '^NoDisplay=true' /usr/share/applications/org.kde.konsole.desktop \
+        || printf '\nNoDisplay=true\n' >> /usr/share/applications/org.kde.konsole.desktop
+fi
+if [[ -f /usr/share/applications/kitty.desktop ]]; then
+    grep -q '^X-KDE-Shortcuts=' /usr/share/applications/kitty.desktop \
+        || printf '\nX-KDE-Shortcuts=Ctrl+Alt+T\n' >> /usr/share/applications/kitty.desktop
 fi
 
 # Aether's desktop file is owned by the aether package. Overlaying it in
@@ -159,6 +167,13 @@ fi
 
 # The local build repo must not linger in the live pacman.conf
 sed -i '/^\[synapseos-local\]/,/^$/d' /etc/pacman.conf
+
+# Live + installed splash. Do not pass -R: mkarchiso rebuilds the
+# archiso initramfs after this script, and the installed image is
+# rebuilt by Calamares' initcpio module.
+if command -v plymouth-set-default-theme >/dev/null; then
+    plymouth-set-default-theme synapseos || true
+fi
 
 # --- Stash the kernel and microcode outside /boot ----------------------------
 # mkarchiso empties /boot in the pacstrap dir (_cleanup_pacstrap_dir) *before*

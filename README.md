@@ -38,7 +38,7 @@ live filesystem, in the installed system too.
 
 | Area        | Packages                                                                 |
 | ----------- | ------------------------------------------------------------------------ |
-| Desktop     | Plasma 6 (Catppuccin Macchiato), firefox, helium-browser, pipewire       |
+| Desktop     | Plasma 6 (Catppuccin Macchiato), firefox, helium-browser, pipewire, obs-studio |
 | C / C++     | base-devel (gcc), clang, llvm, lld, gdb, lldb, valgrind, cmake, ninja, meson |
 | Java        | jdk-openjdk, maven, gradle                                               |
 | Go          | go, gopls                                                                |

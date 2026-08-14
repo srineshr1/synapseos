@@ -36,4 +36,5 @@ file_permissions=(
   ["/usr/bin/synapseos-check-desktop"]="0:0:755"
   ["/usr/share/synapseos/prepare.sh"]="0:0:755"
   ["/usr/share/synapseos/postinstall.sh"]="0:0:755"
+  ["/usr/share/synapseos/inject-plymouth.sh"]="0:0:755"
 )

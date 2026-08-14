@@ -36,7 +36,7 @@
     tasks.currentConfigGroup = ["General"];
     tasks.writeConfig(
         "launchers",
-        "applications:org.kde.dolphin.desktop,applications:firefox.desktop,applications:org.kde.kate.desktop,applications:org.kde.konsole.desktop,applications:synapseos-assistant.desktop,applications:aether.desktop,applications:systemsettings.desktop"
+        "applications:org.kde.dolphin.desktop,applications:firefox.desktop,applications:org.kde.kate.desktop,applications:kitty.desktop,applications:synapseos-assistant.desktop,applications:aether.desktop,applications:systemsettings.desktop"
     );
     tasks.writeConfig("fill", false);
     tasks.writeConfig("maxStripes", 1);

@@ -99,6 +99,20 @@ install -d -m 2755 -g systemd-journal /var/log/journal
 # --- The live pacman repo must not linger -----------------------------------
 sed -i '/^\[synapseos-local\]/,/^$/d' /etc/pacman.conf
 
+# --- Pacman keyring ---------------------------------------------------------
+# The live ISO keeps /etc/pacman.d/gnupg on a tmpfs (etc-pacman.d-gnupg.mount)
+# and fills it at boot with pacman-init.service. Calamares unpackfs copies
+# the squashfs, not that tmpfs, so the installed system only gets the empty
+# mount point. The units above are then deleted. Result: `pacman -S` dies
+# with "keyring is not writable" / "Public keyring not found" and a 300+
+# package upgrade cannot even start.
+rm -f /etc/systemd/system/multi-user.target.wants/pacman-init.service \
+      /etc/systemd/system/multi-user.target.wants/choose-mirror.service
+rm -rf /etc/pacman.d/gnupg
+install -d -m 0755 /etc/pacman.d/gnupg
+pacman-key --init
+pacman-key --populate archlinux
+
 # --- Remove the installer itself --------------------------------------------
 rm -f /usr/share/applications/synapseos-installer.desktop \
       /etc/xdg/autostart/synapseos-installer.desktop \
@@ -135,6 +149,7 @@ chmod 644 /etc/motd
 # installed desktop still reads from this tree. The assistant lives in
 # /usr/lib/synapseos and is not touched here.
 rm -rf /usr/share/synapseos/boot
-rm -f /usr/share/synapseos/prepare.sh /usr/share/synapseos/postinstall.sh
+rm -f /usr/share/synapseos/prepare.sh /usr/share/synapseos/postinstall.sh \
+    /usr/share/synapseos/inject-plymouth.sh
 
 exit 0

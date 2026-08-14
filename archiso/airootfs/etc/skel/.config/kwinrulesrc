@@ -1,6 +1,30 @@
 [General]
-count=2
-rules=a11e0001-5e0f-4b10-9c0d-000000000001,a11e0001-5e0f-4b10-9c0d-000000000002
+count=3
+rules=a11e0001-5e0f-4b10-9c0d-000000000002,a11e0001-5e0f-4b10-9c0d-000000000003,a11e0001-5e0f-4b10-9c0d-000000000001
+
+[a11e0001-5e0f-4b10-9c0d-000000000002]
+Description=Opaque browsers
+Enabled=true
+opacityactive=100
+opacityactiverule=2
+opacityinactive=100
+opacityinactiverule=2
+wmclass=firefox|firefox-esr|Google-chrome|chromium|brave-browser|helium|helium-browser|librewolf|zen|vivaldi-stable|msedge|opera|org.mozilla.firefox|Navigator
+wmclasscomplete=false
+wmclassmatch=3
+types=1
+
+[a11e0001-5e0f-4b10-9c0d-000000000003]
+Description=Translucent terminals
+Enabled=true
+opacityactive=78
+opacityactiverule=2
+opacityinactive=62
+opacityinactiverule=2
+wmclass=kitty|konsole|Alacritty|org.kde.konsole
+wmclasscomplete=false
+wmclassmatch=3
+types=1
 
 [a11e0001-5e0f-4b10-9c0d-000000000001]
 Description=SynapseOS translucent windows
@@ -12,15 +36,3 @@ opacityinactiverule=2
 types=1
 wmclass=
 wmclassmatch=0
-
-[a11e0001-5e0f-4b10-9c0d-000000000002]
-Description=Opaque browsers
-Enabled=true
-opacityactive=100
-opacityactiverule=2
-opacityinactive=100
-opacityinactiverule=2
-wmclass=firefox|firefox-esr|Google-chrome|chromium|brave-browser|helium|helium-browser|librewolf|zen|vivaldi-stable|msedge|opera|org.mozilla.firefox
-wmclasscomplete=false
-wmclassmatch=3
-types=1

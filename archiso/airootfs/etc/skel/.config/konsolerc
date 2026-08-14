@@ -18,9 +18,15 @@ MenuBar=Disabled
 
 [Toolbar mainToolBar]
 hidden=true
+Hidden=true
 
 [Toolbar sessionToolbar]
 hidden=true
+Hidden=true
+
+[Toolbar extraToolBar]
+hidden=true
+Hidden=true
 
 [UiSettings]
 ColorScheme=

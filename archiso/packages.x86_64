@@ -146,8 +146,10 @@ kwin-effects-better-blur-dx
 vulkan-headers
 sddm
 sddm-kcm
+plymouth
 dolphin
 konsole
+kitty
 kate
 gwenview
 spectacle
@@ -285,6 +287,11 @@ unzip
 # ---- Browsers ----
 # firefox is above; helium-browser-bin is a Chromium fork from the AUR.
 helium-browser-bin
+
+# ---- Capture / stream ----
+# Shipped so OBS does not require a 300-package -Syu on a stale snapshot
+# just to get a desktop recorder. Live overlay RAM cannot absorb that.
+obs-studio
 
 # Overlay UI for Super+S (synapseos-overlay). Qt 6 itself is already pulled
 # in by Plasma; this is the Python bindings.

@@ -1,0 +1,13 @@
+[SddmGreeterTheme]
+Name=SynapseOS
+Description=Minimal Macchiato login
+Author=SynapseOS
+Type=sddm-theme
+Version=1.0
+Screenshot=logo.png
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=synapseos
+Theme-API=2.0
+License=MIT
+QtVersion=6

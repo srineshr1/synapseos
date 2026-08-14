@@ -40,8 +40,8 @@ QListView::item {
 }
 
 QListView::item:selected {
-    background-color: #c6a0f6;
-    color: #181926;
+    background-color: #24273a;
+    color: #c6a0f6;
 }
 
 QLabel {
