@@ -129,6 +129,10 @@ do
     fi
 done
 
+in_vm() {
+    command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt -q
+}
+
 load_blur() {
     local dbus=$1
     local loaded
@@ -137,6 +141,17 @@ load_blur() {
     $dbus org.kde.KWin /Effects org.kde.kwin.Effects.unloadEffect contrast >/dev/null 2>&1 || true
     $dbus org.kde.KWin /Effects org.kde.kwin.Effects.unloadEffect synapseosjump >/dev/null 2>&1 || true
     $dbus org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect synapseosfrost >/dev/null 2>&1 || true
+    # Better Blur DX lies on virgl: it reports "Effect supported" but
+    # composites nothing. Stock KWin blur + the frost effect is the
+    # reliable path in a VM, so DX never wins there.
+    if in_vm; then
+        $dbus org.kde.KWin /Effects org.kde.kwin.Effects.unloadEffect better_blur_dx >/dev/null 2>&1 || true
+        kw --file kwinrc --group Plugins --key better_blur_dxEnabled false
+        kw --file kwinrc --group Plugins --key blurEnabled true
+        $dbus org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect blur >/dev/null 2>&1 || true
+        $dbus org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+        return 0
+    fi
     # Stock blur first so Kickoff/kitty are never left as plain transparency.
     # Better Blur DX is nicer (force-blur) but often fails to composite in
     # a VM even when it reports "Effect supported".

@@ -19,6 +19,7 @@ done
 
 echo
 echo "=== compositor / blur ==="
+printf 'virtualisation=%s\n' "$(systemd-detect-virt 2>/dev/null || echo none)"
 printf 'KWIN_COMPOSE=%s\n' "${KWIN_COMPOSE:-unset}"
 if command -v qdbus6 >/dev/null; then
     echo "compositingType=$(qdbus6 org.kde.KWin /Compositor org.kde.kwin.Compositing.compositingType 2>/dev/null || echo '?')"

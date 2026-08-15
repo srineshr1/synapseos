@@ -353,6 +353,10 @@ class DesktopConfigTests(unittest.TestCase):
         self.assertIn("blurEnabled true", text)
         self.assertIn("loadEffect blur", text)
         self.assertIn("loadEffect synapseosfrost", text)
+        # Better Blur DX reports loaded but composites nothing on virgl:
+        # a VM must always end up on stock blur + frost, never DX.
+        self.assertIn("systemd-detect-virt -q", text)
+        self.assertIn("unloadEffect better_blur_dx", text)
         gfx = (
             ROOT / "archiso/airootfs/etc/profile.d/synapseos-graphics.sh"
         ).read_text(encoding="utf-8")
@@ -365,7 +369,10 @@ class DesktopConfigTests(unittest.TestCase):
         fix = ROOT / "archiso/airootfs/usr/bin/synapseos-fix-blur"
         self.assertTrue(fix.is_file())
         self.assertTrue(stat.S_IXUSR & fix.stat().st_mode)
-        self.assertIn("kwin_wayland --replace", fix.read_text(encoding="utf-8"))
+        fix_text = fix.read_text(encoding="utf-8")
+        self.assertIn("kwin_wayland --replace", fix_text)
+        self.assertIn("systemd-detect-virt -q", fix_text)
+        self.assertIn("unloadEffect better_blur_dx", fix_text)
         pkgs = (ROOT / "archiso/packages.x86_64").read_text(encoding="utf-8")
         self.assertRegex(pkgs, r"(?m)^vulkan-swrast$")
         self.assertRegex(pkgs, r"(?m)^vulkan-virtio$")
