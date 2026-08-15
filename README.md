@@ -402,9 +402,11 @@ entry) skips the Plasma autostart and leaves a plain shell for debugging.
 
 ### The desktop fails to start in a VM
 
-Blur (windows, menus, Kickoff) needs OpenGL plus Better Blur DX
-(`kwin-effects-better-blur-dx` in `archiso/repo/`). Rebuild that package
-after a kwin upgrade (`./tools/build-aur.sh kwin-effects-better-blur-dx`).
+Blur (windows, menus, Kickoff) needs OpenGL. Better Blur DX
+(`kwin-effects-better-blur-dx` in `archiso/repo/`) is preferred; if it
+fails to load, stock KWin blur plus the SynapseOS frost effect take over.
+Rebuild the DX package after a kwin upgrade
+(`./tools/build-aur.sh kwin-effects-better-blur-dx`).
 Software composition (`KWIN_COMPOSE=Q`) cannot blur — it is opt-in via the
 **safe graphics** boot entry (`safegfx`) or:
 
@@ -418,6 +420,22 @@ accepted as an alias.
 VirtualBox: graphics controller **VMSVGA**, **3D acceleration on**, 128 MB
 of VRAM. Without 3D, KWin falls back to software GL (slow blur) or fails
 and you boot **safe graphics** instead.
+
+QEMU (do not use plain `virtio-vga` — that is 2D and blur will not run):
+
+```bash
+./tools/run-iso.sh                  # as your user, not sudo
+```
+
+`sudo ./build.sh` leaves `out/` owned by root, so the VM disk is created in
+`~/.cache/synapseos/`. Fix ownership with
+`sudo chown -R "$USER:$USER" out` if you want the qcow2 next to the ISO.
+Do not launch qemu with sudo — GTK then has no GPU and blur dies.
+On Hyprland the viewer is `sdl,gl=on` (GTK GL is unsupported there).
+
+Calamares needs a disk of at least 25 GiB. A CD-only VM shows
+"There are no partitions to install on" and refuses Next. VirtualBox:
+add a 40 GB VDI and keep **VMSVGA + 3D**.
 
 `virtualbox-guest-utils` replaces archiso's `virtualbox-guest-utils-nox` in the
 package list, which adds `VBoxDRMClient` (resolution follows the window on a

@@ -1,9 +1,9 @@
 # SynapseOS: KWin compositor backend.
 #
-# Frosted menus, Kickoff and inactive windows need OpenGL. QPainter
-# composition (KWIN_COMPOSE=Q) is stable on broken GPUs but cannot blur,
-# so it is opt-in only:
-#   auto  (default)  OpenGL, including in a VM
+# Frosted menus, Kickoff and inactive windows need OpenGL. Stock KWin
+# blur only loads when isOpenGLCompositing() is true — a Vulkan or
+# QPainter scene makes loadEffect(blur) return false.
+#   auto  (default)  KWIN_COMPOSE=O
 #   safe             KWIN_COMPOSE=Q (`safegfx` on the kernel cmdline, or
 #                    /etc/synapseos/safe-graphics)
 #   off              /etc/synapseos/no-safe-graphics exists: never apply Q
@@ -23,6 +23,9 @@ if [ ! -e /etc/synapseos/no-safe-graphics ]; then
     case "${_synapseos_gfx}" in
         safe)
             export KWIN_COMPOSE="${KWIN_COMPOSE:-Q}"
+            ;;
+        auto)
+            export KWIN_COMPOSE="${KWIN_COMPOSE:-O}"
             ;;
     esac
 

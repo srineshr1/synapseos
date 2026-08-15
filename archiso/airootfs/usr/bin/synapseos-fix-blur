@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# Force KWin onto OpenGL and load blur. Run as the desktop user.
+set -u
+
+export KWIN_COMPOSE="${KWIN_COMPOSE:-O}"
+
+ENVDIR="${XDG_CONFIG_HOME:-$HOME/.config}/plasma-workspace/env"
+mkdir -p "$ENVDIR"
+printf 'export KWIN_COMPOSE=O\n' > "$ENVDIR/synapseos-compose.sh"
+chmod +x "$ENVDIR/synapseos-compose.sh"
+
+if command -v qdbus6 >/dev/null; then
+    dbus=qdbus6
+elif command -v qdbus >/dev/null; then
+    dbus=qdbus
+else
+    echo "qdbus6 not found" >&2
+    exit 1
+fi
+
+wait_kwin() {
+    local i
+    for i in $(seq 1 30); do
+        $dbus org.kde.KWin /KWin >/dev/null 2>&1 && return 0
+        sleep 0.4
+    done
+    return 1
+}
+
+load_blur() {
+    $dbus org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect blur >/dev/null 2>&1 || true
+    $dbus org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect better_blur_dx >/dev/null 2>&1 || true
+    $dbus org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect synapseosfrost >/dev/null 2>&1 || true
+    $dbus org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+}
+
+blur_loaded() {
+    local v
+    v="$($dbus org.kde.KWin /Effects org.kde.kwin.Effects.isEffectLoaded blur 2>/dev/null || true)"
+    [[ "$v" == *true* ]]
+}
+
+replace_kwin() {
+    kwin_wayland --replace >/tmp/synapseos-kwin-replace.log 2>&1 &
+    disown
+    wait_kwin
+}
+
+ctype="$($dbus org.kde.KWin /Compositor org.kde.kwin.Compositing.compositingType 2>/dev/null || echo unknown)"
+echo "compositingType=$ctype  KWIN_COMPOSE=$KWIN_COMPOSE"
+
+if blur_loaded; then
+    load_blur
+    echo "blur already loaded"
+    exit 0
+fi
+
+echo "replacing kwin with OpenGL (KWIN_COMPOSE=O)"
+replace_kwin
+load_blur
+ctype="$($dbus org.kde.KWin /Compositor org.kde.kwin.Compositing.compositingType 2>/dev/null || echo unknown)"
+echo "after replace: compositingType=$ctype"
+
+if blur_loaded; then
+    echo "blur loaded"
+    exit 0
+fi
+
+echo "OpenGL blur still failed — retrying with llvmpipe"
+export LIBGL_ALWAYS_SOFTWARE=1
+export GALLIUM_DRIVER=llvmpipe
+printf '%s\n' \
+    'export KWIN_COMPOSE=O' \
+    'export LIBGL_ALWAYS_SOFTWARE=1' \
+    'export GALLIUM_DRIVER=llvmpipe' \
+    > "$ENVDIR/synapseos-compose.sh"
+replace_kwin
+load_blur
+ctype="$($dbus org.kde.KWin /Compositor org.kde.kwin.Compositing.compositingType 2>/dev/null || echo unknown)"
+echo "after llvmpipe: compositingType=$ctype"
+if blur_loaded; then
+    echo "blur loaded (software GL)"
+    exit 0
+fi
+
+echo "blur still not loaded. last kwin log:" >&2
+tail -n 40 /tmp/synapseos-kwin-replace.log 2>/dev/null || true
+echo "compositor support:" >&2
+$dbus org.kde.KWin /KWin supportInformation 2>/dev/null \
+    | grep -Ei 'composit|opengl|backend|render|vulkan|qpainter|software' \
+    | head -n 30 || true
+exit 1

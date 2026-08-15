@@ -143,6 +143,9 @@ powerdevil
 bluedevil
 kwin
 kwin-effects-better-blur-dx
+mesa
+vulkan-virtio
+vulkan-swrast
 vulkan-headers
 sddm
 sddm-kcm

@@ -303,6 +303,9 @@ class DesktopConfigTests(unittest.TestCase):
         self.assertIn("scaleEnabled=true", kwinrc)
         self.assertIn("synapseosjumpEnabled=false", kwinrc)
         self.assertIn("magiclampEnabled=true", kwinrc)
+        self.assertIn("blurEnabled=true", kwinrc)
+        self.assertIn("better_blur_dxEnabled=true", kwinrc)
+        self.assertIn("synapseosfrostEnabled=true", kwinrc)
 
     def test_jetbrains_fonts_and_konsole_profile(self) -> None:
         kde = (ROOT / "archiso/airootfs/etc/skel/.config/kdeglobals").read_text(
@@ -325,7 +328,14 @@ class DesktopConfigTests(unittest.TestCase):
             ROOT / "archiso/airootfs/etc/skel/.config/kitty/kitty.conf"
         ).read_text(encoding="utf-8")
         self.assertIn("background_opacity 0.78", kitty_conf)
+        self.assertIn("background_blur 32", kitty_conf)
         self.assertIn("JetBrainsMono Nerd Font Mono", kitty_conf)
+        frost = (
+            ROOT / "archiso/airootfs/usr/share/kwin/effects/synapseosfrost/"
+            "contents/code/main.js"
+        )
+        self.assertTrue(frost.is_file())
+        self.assertIn("WindowForceBlurRole", frost.read_text(encoding="utf-8"))
         kde = ROOT / "archiso/airootfs/etc/skel/.config/kdeglobals"
         self.assertIn("TerminalApplication=kitty", kde.read_text(encoding="utf-8"))
         rules = (
@@ -338,6 +348,37 @@ class DesktopConfigTests(unittest.TestCase):
         )
         chrome = ROOT / "archiso/airootfs/usr/bin/synapseos-apply-chrome"
         self.assertTrue(chrome.is_file())
+        text = chrome.read_text(encoding="utf-8")
+        self.assertIn("isEffectLoaded better_blur_dx", text)
+        self.assertIn("blurEnabled true", text)
+        self.assertIn("loadEffect blur", text)
+        self.assertIn("loadEffect synapseosfrost", text)
+        gfx = (
+            ROOT / "archiso/airootfs/etc/profile.d/synapseos-graphics.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn('KWIN_COMPOSE="${KWIN_COMPOSE:-O}"', gfx)
+        env = (
+            ROOT / "archiso/airootfs/etc/xdg/plasma-workspace/env/"
+            "synapseos-graphics.sh"
+        )
+        self.assertTrue(env.is_file())
+        fix = ROOT / "archiso/airootfs/usr/bin/synapseos-fix-blur"
+        self.assertTrue(fix.is_file())
+        self.assertTrue(stat.S_IXUSR & fix.stat().st_mode)
+        self.assertIn("kwin_wayland --replace", fix.read_text(encoding="utf-8"))
+        pkgs = (ROOT / "archiso/packages.x86_64").read_text(encoding="utf-8")
+        self.assertRegex(pkgs, r"(?m)^vulkan-swrast$")
+        self.assertRegex(pkgs, r"(?m)^vulkan-virtio$")
+        hotfix = ROOT / "tools/live-hotfix-desktop.sh"
+        self.assertIn("synapseosfrost", hotfix.read_text(encoding="utf-8"))
+        runner = ROOT / "tools/run-iso.sh"
+        self.assertTrue(runner.is_file())
+        text = runner.read_text(encoding="utf-8")
+        self.assertIn("virtio-vga-gl", text)
+        self.assertIn("qcow2", text)
+        self.assertIn("if=virtio", text)
+        self.assertIn("sdl,gl=on", text)
+        self.assertIn("do not use sudo", text)
 
     def test_aether_plasma_hook_prefers_rendered_template(self) -> None:
         hook = (

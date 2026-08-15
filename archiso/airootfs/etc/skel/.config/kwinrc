@@ -35,7 +35,7 @@ InScale=0.55
 OutScale=0.55
 
 [Plugins]
-blurEnabled=false
+blurEnabled=true
 better_blur_dxEnabled=true
 contrastEnabled=false
 kwin4_effect_geometry_changeEnabled=true
@@ -48,6 +48,7 @@ scaleEnabled=true
 glideEnabled=false
 fadeEnabled=false
 synapseosjumpEnabled=false
+synapseosfrostEnabled=true
 startupfeedbackEnabled=true
 fadingpopupsEnabled=true
 slidingpopupsEnabled=true

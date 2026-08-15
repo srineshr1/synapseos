@@ -43,6 +43,23 @@ if [[ -f "$src/usr/share/synapseos/kwin/scale-main.js" ]]; then
         /usr/share/kwin-wayland/effects/scale/contents/code/main.js
 fi
 
+# Force-blur helper so stock KWin blur frosts kitty/windows when
+# Better Blur DX does not load.
+if [[ -f "$src/usr/share/synapseos/kwin/frost-main.js" ]]; then
+    install -d /usr/share/kwin/effects/synapseosfrost/contents/code
+    install -d /usr/share/kwin-wayland/effects/synapseosfrost/contents/code
+    install -m 0644 "$src/usr/share/synapseos/kwin/frost-main.js" \
+        /usr/share/kwin/effects/synapseosfrost/contents/code/main.js
+    install -m 0644 "$src/usr/share/synapseos/kwin/frost-main.js" \
+        /usr/share/kwin-wayland/effects/synapseosfrost/contents/code/main.js
+    if [[ -f "$src/usr/share/kwin/effects/synapseosfrost/metadata.json" ]]; then
+        install -m 0644 "$src/usr/share/kwin/effects/synapseosfrost/metadata.json" \
+            /usr/share/kwin/effects/synapseosfrost/metadata.json
+        install -m 0644 "$src/usr/share/kwin/effects/synapseosfrost/metadata.json" \
+            /usr/share/kwin-wayland/effects/synapseosfrost/metadata.json
+    fi
+fi
+
 install -d /etc/xdg /etc/environment.d /etc/firefox/policies \
     /usr/lib/firefox/defaults/pref
 install -m 0644 "$src/etc/xdg/kwinrc" /etc/xdg/kwinrc
@@ -62,7 +79,7 @@ install -m 0644 "$src/etc/firefox/policies/policies.json" \
 install -m 0644 "$src/usr/lib/firefox/defaults/pref/synapseos.js" \
     /usr/lib/firefox/defaults/pref/synapseos.js
 
-for home in /home/live; do
+for home in /home/*; do
     if [[ -d "$home" ]]; then
         owner="$(stat -c %U "$home")"
         group="$(stat -c %G "$home")"
@@ -91,6 +108,18 @@ for home in /home/live; do
             install -m 0644 -o "$owner" -g "$group" \
                 "$src/etc/skel/.config/gtk-4.0/gtk.css" "$home/.config/gtk-4.0/gtk.css"
         fi
+        kitty_conf="$home/.config/kitty/kitty.conf"
+        if [[ -f "$kitty_conf" ]]; then
+            grep -q '^background_opacity ' "$kitty_conf" ||
+                printf '\nbackground_opacity 0.78\n' >> "$kitty_conf"
+            grep -q '^background_blur ' "$kitty_conf" ||
+                printf 'background_blur 32\n' >> "$kitty_conf"
+            chown "$owner:$group" "$kitty_conf"
+        elif [[ -f "$src/etc/skel/.config/kitty/kitty.conf" ]]; then
+            install -d -o "$owner" -g "$group" "$home/.config/kitty"
+            install -m 0644 -o "$owner" -g "$group" \
+                "$src/etc/skel/.config/kitty/kitty.conf" "$kitty_conf"
+        fi
     fi
 done
 
@@ -106,8 +135,8 @@ fi
 
 echo "Installed Plasma graphics + ssh-agent helpers."
 echo "Breeze decorations, bounce scale effect, JetBrains fonts."
-echo "Blur needs OpenGL — VMs no longer force KWIN_COMPOSE=Q."
-echo "Enable 3D acceleration (VMSVGA) in the hypervisor, then log out."
+echo "Blur: stock KWin blur + frost fallback if Better Blur DX fails."
+echo "VMs force OpenGL (KWIN_COMPOSE=O). Enable 3D (virtio-vga-gl / VMSVGA)."
 echo "If the desktop fails to start:  sudo synapseos-safe-graphics on"
 echo "Log out and back in, or run:  synapseos-plasma"
 echo "Then:  synapseos-check-desktop"

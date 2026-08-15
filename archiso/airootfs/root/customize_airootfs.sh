@@ -159,6 +159,13 @@ if [[ -f /usr/share/synapseos/kwin/scale-main.js ]]; then
     install -m 0644 /usr/share/synapseos/kwin/scale-main.js \
         /usr/share/kwin-wayland/effects/scale/contents/code/main.js
 fi
+if [[ -f /usr/share/synapseos/kwin/frost-main.js ]]; then
+    install -d /usr/share/kwin-wayland/effects/synapseosfrost/contents/code
+    install -m 0644 /usr/share/synapseos/kwin/frost-main.js \
+        /usr/share/kwin-wayland/effects/synapseosfrost/contents/code/main.js
+    install -m 0644 /usr/share/kwin/effects/synapseosfrost/metadata.json \
+        /usr/share/kwin-wayland/effects/synapseosfrost/metadata.json
+fi
 
 # Qt will not see JetBrains if the live image has no fontconfig cache.
 if command -v fc-cache >/dev/null; then

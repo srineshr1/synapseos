@@ -20,6 +20,11 @@ done
 echo
 echo "=== compositor / blur ==="
 printf 'KWIN_COMPOSE=%s\n' "${KWIN_COMPOSE:-unset}"
+if command -v qdbus6 >/dev/null; then
+    echo "compositingType=$(qdbus6 org.kde.KWin /Compositor org.kde.kwin.Compositing.compositingType 2>/dev/null || echo '?')"
+elif command -v qdbus >/dev/null; then
+    echo "compositingType=$(qdbus org.kde.KWin /Compositor org.kde.kwin.Compositing.compositingType 2>/dev/null || echo '?')"
+fi
 if [[ "${KWIN_COMPOSE:-}" == Q ]]; then
     echo "WARN: software composition — blur cannot run. Reboot without safegfx,"
     echo "      or: sudo synapseos-safe-graphics off && loginctl terminate-user $USER"
