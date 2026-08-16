@@ -2,11 +2,12 @@
 # Force KWin onto OpenGL and load blur. Run as the desktop user.
 set -u
 
-export KWIN_COMPOSE="${KWIN_COMPOSE:-O}"
+# Do not set KWIN_COMPOSE=O — KWin exits if OpenGL cannot start.
+export KWIN_DISABLE_VULKAN="${KWIN_DISABLE_VULKAN:-1}"
 
 ENVDIR="${XDG_CONFIG_HOME:-$HOME/.config}/plasma-workspace/env"
 mkdir -p "$ENVDIR"
-printf 'export KWIN_COMPOSE=O\n' > "$ENVDIR/synapseos-compose.sh"
+printf '%s\n' 'export KWIN_DISABLE_VULKAN=1' > "$ENVDIR/synapseos-compose.sh"
 chmod +x "$ENVDIR/synapseos-compose.sh"
 
 if command -v qdbus6 >/dev/null; then
@@ -72,7 +73,7 @@ replace_kwin() {
 }
 
 ctype="$($dbus org.kde.KWin /Compositor org.kde.kwin.Compositing.compositingType 2>/dev/null || echo unknown)"
-echo "compositingType=$ctype  KWIN_COMPOSE=$KWIN_COMPOSE"
+echo "compositingType=$ctype  KWIN_DISABLE_VULKAN=$KWIN_DISABLE_VULKAN"
 
 if blur_loaded; then
     load_blur
@@ -80,7 +81,7 @@ if blur_loaded; then
     exit 0
 fi
 
-echo "replacing kwin with OpenGL (KWIN_COMPOSE=O)"
+echo "replacing kwin (KWIN_DISABLE_VULKAN=1, no fatal KWIN_COMPOSE)"
 replace_kwin
 load_blur
 ctype="$($dbus org.kde.KWin /Compositor org.kde.kwin.Compositing.compositingType 2>/dev/null || echo unknown)"
@@ -95,7 +96,7 @@ echo "OpenGL blur still failed — retrying with llvmpipe"
 export LIBGL_ALWAYS_SOFTWARE=1
 export GALLIUM_DRIVER=llvmpipe
 printf '%s\n' \
-    'export KWIN_COMPOSE=O' \
+    'export KWIN_DISABLE_VULKAN=1' \
     'export LIBGL_ALWAYS_SOFTWARE=1' \
     'export GALLIUM_DRIVER=llvmpipe' \
     > "$ENVDIR/synapseos-compose.sh"
@@ -105,6 +106,21 @@ ctype="$($dbus org.kde.KWin /Compositor org.kde.kwin.Compositing.compositingType
 echo "after llvmpipe: compositingType=$ctype"
 if blur_loaded; then
     echo "blur loaded (software GL)"
+    exit 0
+fi
+
+FROST_WALLPAPER=/usr/share/backgrounds/synapseos/desktop-frost.jpg
+if [[ -f "$FROST_WALLPAPER" ]]; then
+    echo "live blur unavailable — using pre-rendered frost wallpaper"
+    $dbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
+        var img = 'file://${FROST_WALLPAPER}';
+        var ds = desktops();
+        for (var i = 0; i < ds.length; i++) {
+            ds[i].wallpaperPlugin = 'org.kde.image';
+            ds[i].currentConfigGroup = ['Wallpaper', 'org.kde.image', 'General'];
+            ds[i].writeConfig('Image', img);
+        }
+    " >/dev/null 2>&1 || true
     exit 0
 fi
 

@@ -45,25 +45,16 @@ systemctl enable NetworkManager.service
 systemctl enable pacman-init.service choose-mirror.service
 
 # --- SSH agent ---------------------------------------------------------------
-# cosmic-session's /usr/bin/start-cosmic ends with
-#   systemctl --user import-environment XDG_SESSION_TYPE XDG_CURRENT_DESKTOP \
-#                                       DCONF_PROFILE SSH_AUTH_SOCK
-# and only sets SSH_AUTH_SOCK itself when /run/user/$UID/keyring exists, i.e.
-# when gnome-keyring-daemon was already started by PAM. It is not, so the
-# variable is unset and systemctl logs, at every single login,
+# systemctl --user import-environment logs
 #   Environment variable $SSH_AUTH_SOCK not set, ignoring.
-# Enabling gcr's agent for every user gives the session a real ssh-agent, and
-# /etc/profile.d/synapseos-ssh-agent.sh puts its socket in the environment so
-# the import has something to import.
+# when the socket is missing. Enable gcr's agent for every user; the
+# profile.d snippet exports the socket so the import has a value.
 systemctl --global enable gcr-ssh-agent.socket
 # OS MCP broker: starts with the graphical session for every user.
 systemctl --global enable synapse-core.service
 find /usr/lib/synapseos -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
 
-# start-cosmic only looks for gcr/keyring SSH sockets when this directory
-# already exists, i.e. when pam_gnome_keyring ran at login. greetd's stock
-# PAM file does not include it (unlike GDM/SDDM). Optional, so a missing
-# module cannot block login.
+# Optional: a missing module must not block login.
 _add_gnome_keyring_pam() {
     local pam_file="$1"
     [[ -f "$pam_file" ]] || return 0
@@ -71,6 +62,7 @@ _add_gnome_keyring_pam() {
     printf '\nauth       optional     pam_gnome_keyring.so\nsession    optional     pam_gnome_keyring.so auto_start\n' >> "$pam_file"
 }
 _add_gnome_keyring_pam /etc/pam.d/login
+_add_gnome_keyring_pam /etc/pam.d/sddm
 _add_gnome_keyring_pam /etc/pam.d/greetd
 unset -f _add_gnome_keyring_pam
 

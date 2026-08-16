@@ -335,7 +335,19 @@ class DesktopConfigTests(unittest.TestCase):
             "contents/code/main.js"
         )
         self.assertTrue(frost.is_file())
-        self.assertIn("WindowForceBlurRole", frost.read_text(encoding="utf-8"))
+        frost_js = frost.read_text(encoding="utf-8")
+        self.assertIn("WindowForceBlurRole", frost_js)
+        self.assertIn("window.dock", frost_js)
+        frost_img = (
+            ROOT / "archiso/airootfs/usr/share/backgrounds/synapseos/"
+            "desktop-frost.jpg"
+        )
+        self.assertTrue(frost_img.is_file())
+        self.assertGreater(frost_img.stat().st_size, 10_000)
+        self.assertTrue(
+            (ROOT / "archiso/airootfs/usr/share/synapseos/frost-noise.png").is_file()
+        )
+        self.assertTrue((ROOT / "tools/gen-frost.py").is_file())
         kde = ROOT / "archiso/airootfs/etc/skel/.config/kdeglobals"
         self.assertIn("TerminalApplication=kitty", kde.read_text(encoding="utf-8"))
         rules = (
@@ -357,10 +369,25 @@ class DesktopConfigTests(unittest.TestCase):
         # a VM must always end up on stock blur + frost, never DX.
         self.assertIn("systemd-detect-virt -q", text)
         self.assertIn("unloadEffect better_blur_dx", text)
+        self.assertIn("desktop-frost.jpg", text)
+        self.assertIn("BlurStrength 7", text)
         gfx = (
             ROOT / "archiso/airootfs/etc/profile.d/synapseos-graphics.sh"
         ).read_text(encoding="utf-8")
-        self.assertIn('KWIN_COMPOSE="${KWIN_COMPOSE:-O}"', gfx)
+        # O is fatal when OpenGL cannot start. Prefer Vulkan-off instead.
+        self.assertNotIn('KWIN_COMPOSE="${KWIN_COMPOSE:-O}"', gfx)
+        self.assertIn('KWIN_COMPOSE="${KWIN_COMPOSE:-Q}"', gfx)
+        self.assertIn('KWIN_DISABLE_VULKAN="${KWIN_DISABLE_VULKAN:-1}"', gfx)
+        self.assertIn('QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}"', gfx)
+        self.assertIn("systemd-detect-virt", gfx)
+        gen = (
+            ROOT
+            / "archiso/airootfs/usr/lib/systemd/user-environment-generators"
+            / "30-synapseos-graphics"
+        )
+        self.assertTrue(gen.is_file())
+        self.assertTrue(stat.S_IXUSR & gen.stat().st_mode)
+        self.assertIn("synapseos-graphics.sh", gen.read_text(encoding="utf-8"))
         env = (
             ROOT / "archiso/airootfs/etc/xdg/plasma-workspace/env/"
             "synapseos-graphics.sh"

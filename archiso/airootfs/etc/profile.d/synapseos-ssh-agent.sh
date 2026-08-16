@@ -1,13 +1,11 @@
-# SynapseOS: give start-cosmic a real SSH_AUTH_SOCK.
+# SynapseOS: give the session a real SSH_AUTH_SOCK.
 #
-# cosmic-session's /usr/bin/start-cosmic ends with
-#     systemctl --user import-environment ... SSH_AUTH_SOCK
-# and only sets SSH_AUTH_SOCK itself when /run/user/$UID/keyring already exists
-# (gnome-keyring started by PAM). Without a value, systemd logs
+# systemctl --user import-environment logs
 #     Environment variable $SSH_AUTH_SOCK not set, ignoring.
-# That notice is painted on tty1. When cosmic-comp crashes, the compositor
-# surface goes away and the tty flashes through - which looks like this line
-# killed the desktop. It did not; see synapseos-graphics.sh.
+# when the socket is missing. That notice is painted on tty1. When KWin
+# dies the compositor surface goes away and the tty flashes through —
+# which looks like this line killed the desktop. It did not; see
+# synapseos-graphics.sh.
 #
 # gcr-ssh-agent.socket (gcr-4) listens on $XDG_RUNTIME_DIR/gcr/ssh. Export the
 # path even if the socket is still coming up, so the import has something to

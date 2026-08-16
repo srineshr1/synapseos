@@ -1,0 +1,19 @@
+#!/bin/sh
+# Push compositor / Qt Quick vars into every user service (plasmashell,
+# kwin). startplasma does not reliably import these from profile.d.
+# shellcheck disable=SC1091
+[ -r /etc/profile.d/synapseos-graphics.sh ] && . /etc/profile.d/synapseos-graphics.sh
+for _synapseos_v in \
+    KWIN_COMPOSE \
+    KWIN_DISABLE_VULKAN \
+    QT_QUICK_BACKEND \
+    QSG_RHI_BACKEND \
+    KWIN_DRM_USE_MODIFIERS
+do
+    eval "_synapseos_val=\${${_synapseos_v}-}"
+    if [ -n "${_synapseos_val}" ]; then
+        printf '%s=%s\n' "${_synapseos_v}" "${_synapseos_val}"
+    fi
+    unset _synapseos_val
+done
+unset _synapseos_v

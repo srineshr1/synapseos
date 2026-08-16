@@ -10,9 +10,24 @@ fi
 
 src="$(cd "$(dirname "$0")/.." && pwd)/archiso/airootfs"
 
+if [[ -f "$src/usr/share/backgrounds/synapseos/desktop-frost.jpg" ]]; then
+    install -d /usr/share/backgrounds/synapseos
+    install -m 0644 "$src/usr/share/backgrounds/synapseos/desktop-frost.jpg" \
+        /usr/share/backgrounds/synapseos/desktop-frost.jpg
+fi
+if [[ -f "$src/usr/share/synapseos/frost-noise.png" ]]; then
+    install -m 0644 "$src/usr/share/synapseos/frost-noise.png" \
+        /usr/share/synapseos/frost-noise.png
+fi
 install -m 0755 "$src/etc/profile.d/synapseos-graphics.sh" /etc/profile.d/synapseos-graphics.sh
 install -m 0755 "$src/etc/profile.d/synapseos-ssh-agent.sh" /etc/profile.d/synapseos-ssh-agent.sh
 install -m 0755 "$src/usr/bin/synapseos-safe-graphics" /usr/bin/synapseos-safe-graphics
+if [[ -f "$src/usr/lib/systemd/user-environment-generators/30-synapseos-graphics" ]]; then
+    install -d /usr/lib/systemd/user-environment-generators
+    install -m 0755 \
+        "$src/usr/lib/systemd/user-environment-generators/30-synapseos-graphics" \
+        /usr/lib/systemd/user-environment-generators/30-synapseos-graphics
+fi
 if [[ -x "$src/usr/bin/synapseos-plasma" ]]; then
     install -m 0755 "$src/usr/bin/synapseos-plasma" /usr/bin/synapseos-plasma
 fi
@@ -136,7 +151,8 @@ fi
 echo "Installed Plasma graphics + ssh-agent helpers."
 echo "Breeze decorations, bounce scale effect, JetBrains fonts."
 echo "Blur: stock KWin blur + frost fallback if Better Blur DX fails."
-echo "VMs force OpenGL (KWIN_COMPOSE=O). Enable 3D (virtio-vga-gl / VMSVGA)."
-echo "If the desktop fails to start:  sudo synapseos-safe-graphics on"
+echo "VMs use software Qt Quick so plasmashell survives virgl dmabuf."
+echo "Frost: live stock blur if OpenGL works, else desktop-frost.jpg."
+echo "If the desktop fails to start:  export QT_QUICK_BACKEND=software && synapseos-plasma"
 echo "Log out and back in, or run:  synapseos-plasma"
 echo "Then:  synapseos-check-desktop"

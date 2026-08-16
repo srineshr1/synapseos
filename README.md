@@ -1,7 +1,15 @@
 # SynapseOS
 
-An Arch Linux based distribution with a compact Catppuccin Macchiato
-Plasma desktop.
+An Arch Linux desktop with a system assistant as a first-class OS service.
+The assistant sees the session and acts on it through typed tools you
+approve. The ISO is the vehicle. The assistant is the product.
+
+See [docs/GOAL.md](docs/GOAL.md) for the one-sentence goal, what this is
+not (not a Linux kernel, not [AIOS](https://github.com/agiresearch/AIOS)),
+and the v1 definition of done.
+
+The live and installed desktop is Plasma 6 with a compact Catppuccin
+Macchiato look.
 
 ## Project layout
 
@@ -212,7 +220,7 @@ menu or run `synapseos-installer`.
 Calamares copies the live rootfs to disk (offline), then, in order: partitions
 and formats the disk, unpacks the squashfs, writes locale/keymap/fstab, fixes
 the mkinitcpio setup and rebuilds the initramfs, creates your user, enables
-NetworkManager and the COSMIC greeter, installs GRUB (UEFI + BIOS), runs
+NetworkManager and SDDM, installs GRUB (UEFI + BIOS), runs
 `postinstall.sh` to strip the live-media bits, and unmounts the target.
 
 The install image is fully self-contained — no network is required.
@@ -291,13 +299,13 @@ on the live overlay (originals kept as `*.orig`) and is idempotent.
 
 ### Desktop dies when you minimise a window or open an app
 
-That is `cosmic-comp` crashing; the `SSH_AUTH_SOCK not set` line on the
-console is leftover `start-cosmic` output on tty1, not the cause. On an ISO
-built before the compositor workarounds, copy this checkout into the live
+That is KWin failing to compose (usually missing 3D in a VM), not the
+`SSH_AUTH_SOCK not set` line that can flash on tty1. On an ISO built
+before the compositor workarounds, copy this checkout into the live
 session (shared folder, scp, USB) and run:
 
 ```bash
-sudo ./tools/live-hotfix-desktop.sh   # then log out of COSMIC, or reboot
+sudo ./tools/live-hotfix-desktop.sh   # then log out of Plasma, or reboot
 ```
 
 It installs `/etc/profile.d/synapseos-{graphics,ssh-agent}.sh`,
@@ -328,23 +336,17 @@ and log out again.
 | systemd-boot (UEFI)            | `archiso/efiboot/`                                                         |
 | BIOS boot menu                 | `archiso/syslinux/` (640x480 8-bit splash.png from `tools/gen-branding.py`) |
 
-Key COSMIC default state lives in the user config database:
-
-```
-~/.config/cosmic/com.system76.CosmicSettings/v1/*.ron
-```
-
-To change defaults (dock, panel, theme, accent color), start a configured
-session, copy the resulting `~/.config/cosmic/` tree into
-`airootfs/etc/skel/.config/cosmic/`, and rebuild.
+Plasma defaults live in `/etc/xdg/` (system) and `/etc/skel/.config/`
+(new users): `kwinrc`, `kwinrulesrc`, `kdeglobals`, the look-and-feel
+package, and the Konsole / Kitty profiles. To change dock, panel, theme
+or window rules, configure a session, copy the resulting files into
+`airootfs/etc/skel/.config/`, and rebuild.
 
 Live-shell credentials: user `live` / password `live` (passwordless sudo).
 
-COSMIC Initial Setup (theme, layout, keyboard, …) is skipped on the live
-user: `customize_airootfs.sh` writes `~/.config/cosmic-initial-setup-done`.
-That file is not in `/etc/skel`, so the account Calamares creates still gets
-the wizard on first login after install. The `rescue` account is marked done
-too, so a recovery login does not run it.
+Plasma Welcome is skipped on the live user and on `rescue`. The account
+Calamares creates still inherits `/etc/skel` and can run Welcome on first
+login after install.
 
 ## Recovery account on the installed system
 
@@ -402,9 +404,37 @@ entry) skips the Plasma autostart and leaves a plain shell for debugging.
 
 ### The desktop fails to start in a VM
 
+On the 2026.08.15 ISO this is KWin + virgl, not a missing package. Forcing
+`KWIN_COMPOSE=O` makes KWin exit if OpenGL cannot start, and even when the
+compositor comes back, plasmashell dies on
+`error 7: importing the supplied dmabufs failed` (three times →
+start-limit → empty session). **Safe graphics is not enough** — QPainter
+still advertises linux-dmabuf.
+
+On that ISO, switch to tty2 (`Ctrl+Alt+F2`), log in as `live` / `live`, and
+either copy this checkout in and run `sudo ./tools/live-hotfix-desktop.sh`,
+or:
+
+```bash
+export QT_QUICK_BACKEND=software QSG_RHI_BACKEND=software
+unset KWIN_COMPOSE
+export KWIN_DISABLE_VULKAN=1
+synapseos-plasma
+```
+
+Newer images set those automatically in a VM (`systemd-detect-virt`) and
+disable Vulkan instead of requiring OpenGL. Rebuild to pick that up.
+
+Frost in a VM is a pre-rendered cache of the wallpaper
+(`desktop-frost.jpg`, regenerated with `python3 tools/gen-frost.py`)
+plus cheap stock KWin blur when OpenGL actually starts. If live blur
+does not load, translucent windows show the baked frost image instead
+of a raw see-through. Panels and menus are force-blurred; browsers stay
+opaque.
+
 Blur (windows, menus, Kickoff) needs OpenGL. Better Blur DX
-(`kwin-effects-better-blur-dx` in `archiso/repo/`) is preferred; if it
-fails to load, stock KWin blur plus the SynapseOS frost effect take over.
+(`kwin-effects-better-blur-dx` in `archiso/repo/`) is preferred on bare
+metal; a VM always uses stock KWin blur plus the SynapseOS frost effect.
 Rebuild the DX package after a kwin upgrade
 (`./tools/build-aur.sh kwin-effects-better-blur-dx`).
 Software composition (`KWIN_COMPOSE=Q`) cannot blur — it is opt-in via the
@@ -415,7 +445,7 @@ sudo synapseos-safe-graphics on      # or: off, auto, status
 ```
 
 Then log out and back in. `cosmicsafe` on the kernel command line is still
-accepted as an alias.
+accepted as an alias for `safegfx` (leftover from the COSMIC-era ISOs).
 
 VirtualBox: graphics controller **VMSVGA**, **3D acceleration on**, 128 MB
 of VRAM. Without 3D, KWin falls back to software GL (slow blur) or fails
@@ -451,27 +481,26 @@ that, the previous boot and the workaround variables into its bundle.
 
 ### `Environment variable $SSH_AUTH_SOCK not set, ignoring.`
 
-Harmless. `cosmic-session`'s `/usr/bin/start-cosmic` ends with
+Harmless. Something in the session (historically `start-cosmic`, still
+true of some PAM/systemd imports) runs
 
 ```bash
 systemctl --user import-environment XDG_SESSION_TYPE XDG_CURRENT_DESKTOP DCONF_PROFILE SSH_AUTH_SOCK
 ```
 
 and `systemctl import-environment` logs that notice for every variable that is
-unset; it still exits 0. `start-cosmic` only sets `SSH_AUTH_SOCK` itself when
-`/run/user/$UID/keyring` already exists, i.e. when `pam_gnome_keyring` started
-the daemon at login, which this profile does not configure.
+unset; it still exits 0.
 
 The profile turns it into something useful instead of silencing it:
 `customize_airootfs.sh` runs `systemctl --global enable gcr-ssh-agent.socket`
-(from `gcr-4`) and adds `pam_gnome_keyring` to `/etc/pam.d/{login,greetd}` so
-start-cosmic's own keyring branch can run. `airootfs/etc/profile.d/synapseos-ssh-agent.sh`
-exports `SSH_AUTH_SOCK=$XDG_RUNTIME_DIR/gcr/ssh` for login shells (and starts
-the socket if needed) so the import always has a value. An inherited
+(from `gcr-4`) and adds `pam_gnome_keyring` to `/etc/pam.d/{login,sddm,greetd}`.
+`airootfs/etc/profile.d/synapseos-ssh-agent.sh` exports
+`SSH_AUTH_SOCK=$XDG_RUNTIME_DIR/gcr/ssh` for login shells (and starts the
+socket if needed) so the import always has a value. An inherited
 `SSH_AUTH_SOCK` (agent forwarding) is never overwritten.
 
-When cosmic-comp crashes the compositor surface goes away and that leftover
-tty1 line flashes through, which is why it looks like the SSH notice killed
+When KWin dies the compositor surface goes away and that leftover tty1
+line can flash through, which is why it looks like the SSH notice killed
 the desktop. Fix the crash (safe graphics) and the flash goes with it.
 
 On an already-installed system, without rebuilding:

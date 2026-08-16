@@ -34,6 +34,7 @@ file_permissions=(
   ["/usr/bin/synapseos-mcp"]="0:0:755"
   ["/usr/bin/synapsectl"]="0:0:755"
   ["/usr/bin/synapseos-check-desktop"]="0:0:755"
+  ["/usr/lib/systemd/user-environment-generators/30-synapseos-graphics"]="0:0:755"
   ["/usr/share/synapseos/prepare.sh"]="0:0:755"
   ["/usr/share/synapseos/postinstall.sh"]="0:0:755"
   ["/usr/share/synapseos/inject-plymouth.sh"]="0:0:755"

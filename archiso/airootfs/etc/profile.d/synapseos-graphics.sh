@@ -1,12 +1,17 @@
-# SynapseOS: KWin compositor backend.
+# SynapseOS: KWin compositor backend + Qt Quick renderer.
 #
-# Frosted menus, Kickoff and inactive windows need OpenGL. Stock KWin
-# blur only loads when isOpenGLCompositing() is true — a Vulkan or
-# QPainter scene makes loadEffect(blur) return false.
-#   auto  (default)  KWIN_COMPOSE=O
+# Do not set KWIN_COMPOSE=O. If OpenGL cannot start, KWin logs
+#   Could not fulfill the requested compositing mode in KWIN_COMPOSE: 1
+# and exits — the session never comes up. Prefer OpenGL by disabling
+# Vulkan instead; KWin can still fall back to QPainter.
+#   auto  (default)  KWIN_DISABLE_VULKAN=1
 #   safe             KWIN_COMPOSE=Q (`safegfx` on the kernel cmdline, or
 #                    /etc/synapseos/safe-graphics)
-#   off              /etc/synapseos/no-safe-graphics exists: never apply Q
+#   off              /etc/synapseos/no-safe-graphics exists: never apply
+#
+# virgl advertises linux-dmabuf then fails to import. plasmashell dies
+# with "error 7: importing the supplied dmabufs failed" and systemd hits
+# start-limit. In a VM, force software Qt Quick so the shell survives.
 #
 # `cosmicsafe` is still accepted as an alias for safegfx so older boot
 # entries keep working.
@@ -25,9 +30,15 @@ if [ ! -e /etc/synapseos/no-safe-graphics ]; then
             export KWIN_COMPOSE="${KWIN_COMPOSE:-Q}"
             ;;
         auto)
-            export KWIN_COMPOSE="${KWIN_COMPOSE:-O}"
+            export KWIN_DISABLE_VULKAN="${KWIN_DISABLE_VULKAN:-1}"
             ;;
     esac
+
+    if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt -q; then
+        export QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}"
+        export QSG_RHI_BACKEND="${QSG_RHI_BACKEND:-software}"
+        export KWIN_DRM_USE_MODIFIERS="${KWIN_DRM_USE_MODIFIERS:-0}"
+    fi
 
     unset _synapseos_gfx
 fi

@@ -32,6 +32,9 @@ unset GTK_IM_MODULE QT_IM_MODULE GLFW_IM_MODULE
 {
     echo "SSH_AUTH_SOCK=${SSH_AUTH_SOCK:-unset}"
     echo "KWIN_COMPOSE=${KWIN_COMPOSE:-unset}"
+    echo "KWIN_DISABLE_VULKAN=${KWIN_DISABLE_VULKAN:-unset}"
+    echo "QT_QUICK_BACKEND=${QT_QUICK_BACKEND:-unset}"
+    echo "QSG_RHI_BACKEND=${QSG_RHI_BACKEND:-unset}"
     if [[ "${KWIN_COMPOSE:-}" == Q ]]; then
         echo "note: KWIN_COMPOSE=Q disables window blur (safe graphics)"
     fi

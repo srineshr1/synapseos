@@ -1,6 +1,8 @@
-/* Translucent menus so the compositor can blur behind them. */
+/* Translucent menus so the compositor can blur behind them.
+   Grain still reads as frost when live blur is missing (QPainter / virgl). */
 menu,
 .csd menu,
 menuitem > window.popup > menu {
   background-color: alpha(@theme_bg_color, 0.70);
+  background-image: url("file:///usr/share/synapseos/frost-noise.png");
 }

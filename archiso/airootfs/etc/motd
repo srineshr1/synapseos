@@ -11,10 +11,13 @@ No desktop?  synapseos-plasma      starts Plasma and logs it
              synapseos-logs        collects everything into one file
              journalctl -b -p err  errors from this boot
 
-No menu/window blur? The session is on software composition. Enable 3D
-in the VM (VMSVGA) and reboot the normal Live entry — not "safe graphics".
-Desktop fails in a VM? Reboot and pick "safe graphics" (no blur), or:
-    sudo synapseos-safe-graphics on     # then log out and back in
+No menu/window blur? Live blur needs OpenGL. In a VM the session falls
+back to a pre-rendered frost wallpaper (desktop-frost.jpg). Force it with:
+    synapseos-fix-blur
+Desktop fails in a VM? Ctrl+Alt+F2, then:
+    export QT_QUICK_BACKEND=software QSG_RHI_BACKEND=software
+    unset KWIN_COMPOSE
+    synapseos-plasma
 
 Logs:  desktop    ~/.cache/synapseos/plasma-session.log
        installer  ~/.cache/calamares/session.log

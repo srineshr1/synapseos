@@ -21,6 +21,8 @@ echo
 echo "=== compositor / blur ==="
 printf 'virtualisation=%s\n' "$(systemd-detect-virt 2>/dev/null || echo none)"
 printf 'KWIN_COMPOSE=%s\n' "${KWIN_COMPOSE:-unset}"
+printf 'KWIN_DISABLE_VULKAN=%s\n' "${KWIN_DISABLE_VULKAN:-unset}"
+printf 'QT_QUICK_BACKEND=%s\n' "${QT_QUICK_BACKEND:-unset}"
 if command -v qdbus6 >/dev/null; then
     echo "compositingType=$(qdbus6 org.kde.KWin /Compositor org.kde.kwin.Compositing.compositingType 2>/dev/null || echo '?')"
 elif command -v qdbus >/dev/null; then
@@ -29,6 +31,14 @@ fi
 if [[ "${KWIN_COMPOSE:-}" == Q ]]; then
     echo "WARN: software composition — blur cannot run. Reboot without safegfx,"
     echo "      or: sudo synapseos-safe-graphics off && loginctl terminate-user $USER"
+fi
+if [[ "${QT_QUICK_BACKEND:-}" == software ]]; then
+    echo "note: software Qt Quick (VM workaround for virgl dmabuf import)"
+fi
+if [[ -f /usr/share/backgrounds/synapseos/desktop-frost.jpg ]]; then
+    echo "frost cache: /usr/share/backgrounds/synapseos/desktop-frost.jpg"
+else
+    echo "WARN: pre-rendered frost wallpaper missing"
 fi
 grep -E '^(blurEnabled|contrastEnabled|BlurStrength|MenuOpacity)=' \
     "${XDG_CONFIG_HOME:-$HOME/.config}/kwinrc" \

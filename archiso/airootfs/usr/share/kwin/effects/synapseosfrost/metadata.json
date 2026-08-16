@@ -7,7 +7,7 @@
             }
         ],
         "Category": "Appearance",
-        "Description": "Force stock KWin blur behind translucent windows",
+        "Description": "Frost translucent windows via stock blur or the pre-rendered wallpaper cache",
         "EnabledByDefault": true,
         "Icon": "preferences-desktop-effect-blur",
         "Id": "synapseosfrost",
