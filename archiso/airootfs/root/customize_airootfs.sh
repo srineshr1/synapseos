@@ -44,6 +44,9 @@ systemctl enable NetworkManager.service
 # Generic live helpers kept from upstream
 systemctl enable pacman-init.service choose-mirror.service
 
+# Stable path for airootfs.sfs before Calamares (copytoram may drop bootmnt)
+systemctl enable synapseos-locate-rootfs.service
+
 # --- SSH agent ---------------------------------------------------------------
 # systemctl --user import-environment logs
 #   Environment variable $SSH_AUTH_SOCK not set, ignoring.

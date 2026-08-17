@@ -150,6 +150,9 @@ chmod 644 /etc/motd
 # /usr/lib/synapseos and is not touched here.
 rm -rf /usr/share/synapseos/boot
 rm -f /usr/share/synapseos/prepare.sh /usr/share/synapseos/postinstall.sh \
-    /usr/share/synapseos/inject-plymouth.sh
+    /usr/share/synapseos/inject-plymouth.sh \
+    /usr/share/synapseos/locate-rootfs.sh
+rm -f /etc/systemd/system/synapseos-locate-rootfs.service \
+    /etc/systemd/system/multi-user.target.wants/synapseos-locate-rootfs.service
 
 exit 0

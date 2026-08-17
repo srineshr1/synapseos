@@ -1,0 +1,15 @@
+[Unit]
+Description=Locate SynapseOS installation image for Calamares
+Documentation=file:///usr/share/synapseos/locate-rootfs.sh
+# Live medium only: /run/archiso is created by the archiso initramfs.
+ConditionDirectoryNotEmpty=/run/archiso
+After=local-fs.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/share/synapseos/locate-rootfs.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

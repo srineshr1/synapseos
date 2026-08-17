@@ -45,7 +45,20 @@ if [[ "${1:-}" == --autostart ]]; then
     export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-KDE}"
 fi
 
+# Publish /run/synapseos/airootfs.sfs before Calamares starts. On bare-metal
+# USB boots, copytoram may have already removed /run/archiso/bootmnt.
+ensure_rootfs() {
+    if [[ -x /usr/share/synapseos/locate-rootfs.sh ]]; then
+        if [ "$(id -u)" -eq 0 ]; then
+            /usr/share/synapseos/locate-rootfs.sh
+        else
+            sudo -- /usr/share/synapseos/locate-rootfs.sh
+        fi
+    fi
+}
+
 if [ "$(id -u)" -eq 0 ]; then
+    ensure_rootfs
     exec calamares "$@"
 fi
 
@@ -61,4 +74,5 @@ for var in WAYLAND_DISPLAY XDG_RUNTIME_DIR XDG_SESSION_TYPE XDG_CURRENT_DESKTOP 
     fi
 done
 
+ensure_rootfs
 exec sudo -- env "${env_args[@]}" calamares "$@"
