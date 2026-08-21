@@ -21,3 +21,4 @@ packaging/*/*.pkg.tar.zst
 
 __pycache__/
 *.pyc
+.iso-upload-secret

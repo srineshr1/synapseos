@@ -1,0 +1,238 @@
+#!/usr/bin/env bash
+# Super+Space menu. Nested gum/fzf choosers, Omarchy-shaped.
+set -euo pipefail
+# shellcheck source=/usr/share/synapseos/lib.sh
+for _sos_lib in /usr/share/synapseos/lib.sh "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib.sh" "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"; do
+    [[ -f $_sos_lib ]] && { source "$_sos_lib"; break; }
+done
+unset _sos_lib
+
+BIN=/usr/share/synapseos/bin
+export PATH="$BIN:$PATH"
+
+back="← Back"
+
+pick() {
+    synapseos_pick "$@"
+}
+
+run_install() {
+    "$BIN/synapseos-install" "$@"
+}
+
+menu_apps() {
+    local choice
+    choice=$(pick "Apps" \
+        "Terminal" \
+        "Browser" \
+        "Files" \
+        "Editor" \
+        "btop" \
+        "lazygit" \
+        "lazydocker" \
+        "ChatGPT" \
+        "Grok" \
+        "YouTube" \
+        "X" \
+        "$back") || return 0
+    case "$choice" in
+        Terminal) synapseos_terminal >/dev/null 2>&1 & ;;
+        Browser) synapseos_default_browser ;;
+        Files) dolphin >/dev/null 2>&1 & ;;
+        Editor) synapseos_default_editor ;;
+        btop) synapseos_float btop btop ;;
+        lazygit) synapseos_float lazygit lazygit ;;
+        lazydocker) synapseos_float lazydocker lazydocker ;;
+        ChatGPT) synapseos_webapp "https://chatgpt.com" ;;
+        Grok) synapseos_webapp "https://grok.com" ;;
+        YouTube) synapseos_webapp "https://youtube.com" ;;
+        X) synapseos_webapp "https://x.com" ;;
+        "$back"|"") return 0 ;;
+    esac
+}
+
+menu_install_browser() {
+    local choice
+    choice=$(pick "Install browser" Chrome Brave Edge Firefox Zen "$back") || return 0
+    case "$choice" in
+        Chrome) run_install browser chrome ;;
+        Brave) run_install browser brave ;;
+        Edge) run_install browser edge ;;
+        Firefox) run_install browser firefox ;;
+        Zen) run_install browser zen ;;
+    esac
+}
+
+menu_install_editor() {
+    local choice
+    choice=$(pick "Install editor" "VS Code" Cursor Zed "Sublime Text" Helix Emacs Vim "$back") || return 0
+    case "$choice" in
+        "VS Code") run_install editor vscode ;;
+        Cursor) run_install editor cursor ;;
+        Zed) run_install editor zed ;;
+        "Sublime Text") run_install editor sublime ;;
+        Helix) run_install editor helix ;;
+        Emacs) run_install editor emacs ;;
+        Vim) run_install editor vim ;;
+    esac
+}
+
+menu_install_terminal() {
+    local choice
+    choice=$(pick "Install terminal" Alacritty Foot Ghostty Kitty "$back") || return 0
+    case "$choice" in
+        Alacritty) run_install terminal alacritty ;;
+        Foot) run_install terminal foot ;;
+        Ghostty) run_install terminal ghostty ;;
+        Kitty) run_install terminal kitty ;;
+    esac
+}
+
+menu_install_dev() {
+    local choice
+    choice=$(pick "Install development" \
+        "Node.js" Bun Deno Go Python Rust Java Zig \
+        "Ruby on Rails" PHP Laravel Symfony Elixir Phoenix \
+        ".NET" OCaml Clojure Scala \
+        "Docker DB" \
+        "$back") || return 0
+    case "$choice" in
+        "Node.js") run_install dev-env node ;;
+        Bun) run_install dev-env bun ;;
+        Deno) run_install dev-env deno ;;
+        Go) run_install dev-env go ;;
+        Python) run_install dev-env python ;;
+        Rust) run_install dev-env rust ;;
+        Java) run_install dev-env java ;;
+        Zig) run_install dev-env zig ;;
+        "Ruby on Rails") run_install dev-env ruby ;;
+        PHP) run_install dev-env php ;;
+        Laravel) run_install dev-env laravel ;;
+        Symfony) run_install dev-env symfony ;;
+        Elixir) run_install dev-env elixir ;;
+        Phoenix) run_install dev-env phoenix ;;
+        ".NET") run_install dev-env dotnet ;;
+        OCaml) run_install dev-env ocaml ;;
+        Clojure) run_install dev-env clojure ;;
+        Scala) run_install dev-env scala ;;
+        "Docker DB") run_install docker-dbs ;;
+    esac
+}
+
+menu_install_service() {
+    local choice
+    choice=$(pick "Install service" Spotify Signal Tailscale Steam LocalSend "$back") || return 0
+    case "$choice" in
+        Spotify) run_install service spotify ;;
+        Signal) run_install service signal ;;
+        Tailscale) run_install service tailscale ;;
+        Steam) run_install service steam ;;
+        LocalSend) run_install service localsend ;;
+    esac
+}
+
+menu_install_font() {
+    local choice
+    choice=$(pick "Install font" "Cascadia Mono" "Meslo LG" "Fira Code" Iosevka "Victor Mono" "$back") || return 0
+    case "$choice" in
+        "Cascadia Mono") run_install font cascadia ;;
+        "Meslo LG") run_install font meslo ;;
+        "Fira Code") run_install font fira ;;
+        Iosevka) run_install font iosevka ;;
+        "Victor Mono") run_install font victor ;;
+    esac
+}
+
+menu_install() {
+    local choice
+    choice=$(pick "Install" \
+        "Package" \
+        "AUR" \
+        "Browser" \
+        "Editor" \
+        "Terminal" \
+        "Development" \
+        "Service" \
+        "Font" \
+        "$back") || return 0
+    case "$choice" in
+        Package) run_install package ;;
+        AUR) run_install aur ;;
+        Browser) menu_install_browser ;;
+        Editor) menu_install_editor ;;
+        Terminal) menu_install_terminal ;;
+        Development) menu_install_dev ;;
+        Service) menu_install_service ;;
+        Font) menu_install_font ;;
+    esac
+}
+
+menu_learn() {
+    local choice
+    choice=$(pick "Learn" "Keybindings" "Arch Wiki" "Neovim" "SynapseOS" "$back") || return 0
+    case "$choice" in
+        Keybindings) exec "$BIN/synapseos-keybindings" ;;
+        "Arch Wiki") synapseos_webapp "https://wiki.archlinux.org/title/Main_page" ;;
+        Neovim) synapseos_webapp "https://neovim.io/doc/" ;;
+        SynapseOS) synapseos_webapp "https://github.com" ;;
+    esac
+}
+
+menu_system() {
+    local choice
+    choice=$(pick "System" Lock Logout Reboot Shutdown "$back") || return 0
+    case "$choice" in
+        Lock) loginctl lock-session ;;
+        Logout)
+            if synapseos_have qdbus6; then
+                qdbus6 org.kde.Shutdown /Shutdown logout || loginctl terminate-session "${XDG_SESSION_ID:-}"
+            else
+                loginctl terminate-session "${XDG_SESSION_ID:-}"
+            fi
+            ;;
+        Reboot) systemctl reboot ;;
+        Shutdown) systemctl poweroff ;;
+    esac
+}
+
+menu_toggle() {
+    local choice
+    choice=$(pick "Toggle" \
+        "Hyprland tiling" \
+        "$back") || return 0
+    case "$choice" in
+        "Hyprland tiling") "$BIN/synapseos-toggle" tiling ;;
+    esac
+}
+
+menu_root() {
+    local choice
+    choice=$(pick "SynapseOS" \
+        "Apps" \
+        "Install" \
+        "Toggle" \
+        "Keybindings" \
+        "Learn" \
+        "System") || return 0
+    case "$choice" in
+        Apps) menu_apps ;;
+        Install) menu_install ;;
+        Toggle) menu_toggle ;;
+        Keybindings) exec "$BIN/synapseos-keybindings" ;;
+        Learn) menu_learn ;;
+        System) menu_system ;;
+    esac
+}
+
+section="${1:-}"
+case "$section" in
+    apps) menu_apps ;;
+    install) menu_install ;;
+    system) menu_system ;;
+    learn) menu_learn ;;
+    ""|root) menu_root ;;
+    *)
+        echo "Usage: synapseos menu [apps|install|system|learn]" >&2
+        exit 2
+        ;;
+esac

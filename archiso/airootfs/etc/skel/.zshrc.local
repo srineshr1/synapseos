@@ -1,0 +1,25 @@
+# Sourced by grml-zsh-config from ~/.zshrc. Do not replace /etc/skel/.zshrc:
+# that file is owned by the grml-zsh-config package and pacstrap will refuse
+# to overwrite it.
+
+export EDITOR="${EDITOR:-nvim}"
+export VISUAL="${VISUAL:-$EDITOR}"
+
+alias ll='eza -la --git --icons=auto'
+alias la='eza -a --icons=auto'
+alias lt='eza --tree --level=2 --icons=auto'
+alias gs='git status'
+alias gd='git diff'
+alias lg='lazygit'
+alias ld='lazydocker'
+alias ff='fastfetch'
+
+if command -v mise >/dev/null 2>&1; then
+    eval "$(mise activate zsh)"
+fi
+if command -v starship >/dev/null 2>&1; then
+    eval "$(starship init zsh)"
+fi
+if command -v zoxide >/dev/null 2>&1; then
+    eval "$(zoxide init zsh)"
+fi

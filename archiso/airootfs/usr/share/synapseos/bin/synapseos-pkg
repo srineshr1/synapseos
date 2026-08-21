@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+# Package helpers: add, drop, fzf install, fzf remove, AUR install.
+set -euo pipefail
+# shellcheck source=/usr/share/synapseos/lib.sh
+for _sos_lib in /usr/share/synapseos/lib.sh "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib.sh" "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"; do
+    [[ -f $_sos_lib ]] && { source "$_sos_lib"; break; }
+done
+unset _sos_lib
+
+usage() {
+    cat <<'EOF'
+Usage: synapseos pkg <command>
+
+  add <packages...>     Install official packages if missing
+  aur add <packages...> Install AUR packages if missing (paru)
+  drop <packages...>    Remove packages if present
+  install               Fuzzy-pick official packages
+  aur                   Fuzzy-pick AUR packages
+  remove                Fuzzy-pick installed packages to remove
+  present <packages...> Exit 0 if every package is installed
+  missing <packages...> Exit 0 if any package is missing
+EOF
+}
+
+fzf_install() {
+    local preview="$1"
+    shift
+    local fzf_args=(
+        --multi
+        --preview "$preview"
+        --preview-label='alt-p: toggle description, tab: multi-select'
+        --preview-label-pos=bottom
+        --preview-window 'down:65%:wrap'
+        --bind 'alt-p:toggle-preview'
+        --bind 'alt-d:preview-half-page-down,alt-u:preview-half-page-up'
+        --color "pointer:$SYNAPSEOS_MAUVE,marker:$SYNAPSEOS_MAUVE"
+    )
+    fzf "${fzf_args[@]}"
+}
+
+cmd_add() {
+    (( $# >= 1 )) || { echo "Usage: synapseos pkg add <packages...>" >&2; return 2; }
+    synapseos_pkg_add "$@"
+}
+
+cmd_aur_add() {
+    (( $# >= 1 )) || { echo "Usage: synapseos pkg aur add <packages...>" >&2; return 2; }
+    synapseos_pkg_aur_add "$@"
+}
+
+cmd_drop() {
+    (( $# >= 1 )) || { echo "Usage: synapseos pkg drop <packages...>" >&2; return 2; }
+    synapseos_pkg_drop "$@"
+}
+
+cmd_install() {
+    synapseos_have fzf || { echo "synapseos: fzf is required" >&2; return 1; }
+    local names
+    names=$(pacman -Slq | fzf_install 'pacman -Sii {1}' || true)
+    [[ -z ${names:-} ]] && return 0
+    # shellcheck disable=SC2086
+    synapseos_pkg_add $names
+    synapseos_done
+}
+
+cmd_aur() {
+    synapseos_have fzf || { echo "synapseos: fzf is required" >&2; return 1; }
+    local helper=paru
+    synapseos_have paru || helper=yay
+    synapseos_have "$helper" || { echo "synapseos: need paru or yay" >&2; return 1; }
+    local names
+    names=$("$helper" -Slq aur | fzf_install "$helper -Sii {1}" || true)
+    [[ -z ${names:-} ]] && return 0
+    # shellcheck disable=SC2086
+    synapseos_pkg_aur_add $names
+    synapseos_done
+}
+
+cmd_remove() {
+    synapseos_have fzf || { echo "synapseos: fzf is required" >&2; return 1; }
+    local names
+    names=$(pacman -Qq | fzf_install 'pacman -Qi {1}' || true)
+    [[ -z ${names:-} ]] && return 0
+    # shellcheck disable=SC2086
+    synapseos_pkg_drop $names
+    synapseos_done
+}
+
+main() {
+    local cmd="${1:-}"
+    shift || true
+    case "$cmd" in
+        add) cmd_add "$@" ;;
+        drop) cmd_drop "$@" ;;
+        install) cmd_install ;;
+        aur)
+            if [[ ${1:-} == add ]]; then
+                shift
+                cmd_aur_add "$@"
+            else
+                cmd_aur
+            fi
+            ;;
+        remove) cmd_remove ;;
+        present) synapseos_pkg_present "$@" ;;
+        missing) synapseos_pkg_missing "$@" ;;
+        -h|--help|help|"") usage ;;
+        *)
+            echo "synapseos pkg: unknown command '$cmd'" >&2
+            usage >&2
+            return 2
+            ;;
+    esac
+}
+
+main "$@"

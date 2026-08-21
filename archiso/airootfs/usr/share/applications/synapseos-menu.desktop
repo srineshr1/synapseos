@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=SynapseOS Menu
+GenericName=System menu
+Comment=Apps, one-click installs, and power
+Exec=synapseos menu
+Icon=synapseos-assistant
+Terminal=false
+Categories=System;Utility;
+Keywords=omarchy;install;packages;menu;
+StartupNotify=false
+StartupWMClass=org.synapseos.menu
+X-KDE-Shortcuts=Meta+Space

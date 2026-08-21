@@ -39,4 +39,5 @@ file_permissions=(
   ["/usr/share/synapseos/postinstall.sh"]="0:0:755"
   ["/usr/share/synapseos/inject-plymouth.sh"]="0:0:755"
   ["/usr/share/synapseos/locate-rootfs.sh"]="0:0:755"
+  ["/etc/systemd/system-generators/systemd-gpt-auto-generator"]="0:0:755"
 )

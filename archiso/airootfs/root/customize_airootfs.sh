@@ -135,8 +135,13 @@ if [[ -f /usr/share/applications/org.kde.konsole.desktop ]]; then
         || printf '\nNoDisplay=true\n' >> /usr/share/applications/org.kde.konsole.desktop
 fi
 if [[ -f /usr/share/applications/kitty.desktop ]]; then
-    grep -q '^X-KDE-Shortcuts=' /usr/share/applications/kitty.desktop \
-        || printf '\nX-KDE-Shortcuts=Ctrl+Alt+T\n' >> /usr/share/applications/kitty.desktop
+    if grep -q '^X-KDE-Shortcuts=' /usr/share/applications/kitty.desktop; then
+        sed -i 's|^X-KDE-Shortcuts=.*|X-KDE-Shortcuts=Ctrl+Alt+T;Meta+Return|' \
+            /usr/share/applications/kitty.desktop
+    else
+        printf '\nX-KDE-Shortcuts=Ctrl+Alt+T;Meta+Return\n' \
+            >> /usr/share/applications/kitty.desktop
+    fi
 fi
 
 # Aether's desktop file is owned by the aether package. Overlaying it in
@@ -153,6 +158,12 @@ if [[ -f /usr/share/synapseos/kwin/scale-main.js ]]; then
     install -d /usr/share/kwin-wayland/effects/scale/contents/code
     install -m 0644 /usr/share/synapseos/kwin/scale-main.js \
         /usr/share/kwin-wayland/effects/scale/contents/code/main.js
+fi
+if [[ -d /usr/share/kwin/scripts/synapseostile ]]; then
+    install -d /usr/share/kwin-wayland/scripts
+    rm -rf /usr/share/kwin-wayland/scripts/synapseostile
+    cp -a /usr/share/kwin/scripts/synapseostile \
+        /usr/share/kwin-wayland/scripts/synapseostile
 fi
 if [[ -f /usr/share/synapseos/kwin/frost-main.js ]]; then
     install -d /usr/share/kwin-wayland/effects/synapseosfrost/contents/code

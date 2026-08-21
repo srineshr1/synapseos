@@ -1,0 +1,15 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [{ "Name": "SynapseOS" }],
+        "Description": "Switch: Hyprland-style tiling on, restore floating positions off",
+        "EnabledByDefault": true,
+        "Icon": "preferences-system-windows-effect-presentwindows",
+        "Id": "synapseostile",
+        "License": "MIT",
+        "Name": "SynapseOS Hyprland mode",
+        "Version": "1.0"
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js"
+}

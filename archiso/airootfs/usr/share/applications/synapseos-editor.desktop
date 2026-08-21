@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Editor
+Comment=Open the default editor
+Exec=synapseos launch editor
+Icon=accessories-text-editor
+Terminal=false
+Categories=Development;TextEditor;
+NoDisplay=true
+X-KDE-Shortcuts=Meta+Shift+N

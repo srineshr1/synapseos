@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Docker
+Comment=Open lazydocker
+Exec=synapseos launch tui lazydocker
+Icon=utilities-system-monitor
+Terminal=false
+Categories=Development;
+NoDisplay=true
+X-KDE-Shortcuts=Meta+Shift+D

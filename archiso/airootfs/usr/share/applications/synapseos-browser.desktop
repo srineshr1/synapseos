@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Browser
+Comment=Open the default browser
+Exec=synapseos launch browser
+Icon=internet-web-browser
+Terminal=false
+Categories=Network;WebBrowser;
+NoDisplay=true
+X-KDE-Shortcuts=Meta+Shift+Return;Meta+Shift+B

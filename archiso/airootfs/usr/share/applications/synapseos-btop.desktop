@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Activity
+Comment=Open btop
+Exec=synapseos launch tui btop
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;
+NoDisplay=true
+X-KDE-Shortcuts=Meta+Ctrl+T

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Files
+Comment=Open the file manager
+Exec=synapseos launch files
+Icon=system-file-manager
+Terminal=false
+Categories=System;FileManager;
+NoDisplay=true
+X-KDE-Shortcuts=Meta+Shift+F

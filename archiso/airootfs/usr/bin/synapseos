@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# SynapseOS command center — Omarchy-shaped install / pkg / launch / menu.
+set -euo pipefail
+# shellcheck source=/usr/share/synapseos/lib.sh
+for _sos_lib in /usr/share/synapseos/lib.sh "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib.sh" "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"; do
+    [[ -f $_sos_lib ]] && { source "$_sos_lib"; break; }
+done
+unset _sos_lib
+
+BIN=/usr/share/synapseos/bin
+
+usage() {
+    cat <<'EOF'
+SynapseOS command center
+
+Usage:
+  synapseos                     Open the Super+Space menu
+  synapseos menu [section]      Apps / Install / System / Learn
+  synapseos install …           One-click optional software
+  synapseos pkg …               Package add / remove / fuzzy install
+  synapseos launch …            Terminal, browser, files, editor, webapp
+  synapseos toggle tiling       Hyprland-style tiling (off restores windows)
+  synapseos keybindings         Shortcut cheat sheet
+
+Examples:
+  synapseos install package
+  synapseos install browser chrome
+  synapseos install editor zed
+  synapseos install dev-env node
+  synapseos install docker-dbs
+  synapseos pkg add btop
+  synapseos launch terminal
+EOF
+}
+
+cmd="${1:-menu}"
+shift || true
+
+# Super+Space has no TTY. Open the same menu in a floating Kitty.
+if [[ $cmd == menu && ! -t 0 ]]; then
+    synapseos_float "SynapseOS" "$BIN/synapseos-menu" "$@"
+    exit $?
+fi
+
+case "$cmd" in
+    menu) exec "$BIN/synapseos-menu" "$@" ;;
+    install) exec "$BIN/synapseos-install" "$@" ;;
+    pkg) exec "$BIN/synapseos-pkg" "$@" ;;
+    launch) exec "$BIN/synapseos-launch" "$@" ;;
+    toggle) exec "$BIN/synapseos-toggle" "$@" ;;
+    keybindings|keys|binds)
+        exec "$BIN/synapseos-keybindings" "$@"
+        ;;
+    commands)
+        usage
+        ;;
+    -h|--help|help)
+        usage
+        ;;
+    *)
+        echo "synapseos: unknown command '$cmd'" >&2
+        usage >&2
+        exit 2
+        ;;
+esac

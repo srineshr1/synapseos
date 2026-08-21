@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Keybindings
+Comment=Show SynapseOS shortcuts
+Exec=synapseos launch tui /usr/share/synapseos/bin/synapseos-keybindings
+Icon=preferences-desktop-keyboard
+Terminal=false
+Categories=System;
+NoDisplay=true
+X-KDE-Shortcuts=Meta+K

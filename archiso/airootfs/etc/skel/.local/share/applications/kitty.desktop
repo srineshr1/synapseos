@@ -10,5 +10,5 @@ Icon=kitty
 Categories=System;TerminalEmulator;
 StartupNotify=true
 StartupWMClass=kitty
-X-KDE-Shortcuts=Ctrl+Alt+T
+X-KDE-Shortcuts=Ctrl+Alt+T;Meta+Return
 Keywords=terminal;console;shell;kitty;

@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 # Locate airootfs.sfs for Calamares unpackfs and publish a stable path.
 #
-# On real USB installs with enough free RAM, archiso's default copytoram=auto
-# copies the squashfs into /run/archiso/copytoram/ and unmounts
-# /run/archiso/bootmnt. Calamares was hard-coded to the bootmnt path, so
-# unpackfs failed with "source filesystem does not exist" (often reported as
-# "ISO not found"). VMs usually keep bootmnt (optical device, or too little
-# RAM for the auto threshold), which is why the same ISO could install in a
-# VM and fail on bare metal.
+# Default live boot is copytoram=n (image stays on the USB). Advanced →
+# Copy to RAM still copies into /run/archiso/copytoram/ and unmounts
+# /run/archiso/bootmnt. Calamares used to be hard-coded to bootmnt, so
+# unpackfs failed with "source filesystem does not exist". Search both.
 set -euo pipefail
 
 STABLE_DIR=/run/synapseos

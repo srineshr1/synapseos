@@ -1,1 +1,8 @@
-/dev/null
+#!/bin/sh
+# Shadow /usr/lib/systemd/system-generators/systemd-gpt-auto-generator.
+# A symlink to /dev/null or an empty file is not a valid ELF. systemd 253+
+# then prints "Invalid ELF header magic" / "Failed to fork off sandboxing
+# environment" and freezes PID 1 before the installer can start.
+# This no-op is a real script so generators still run. Calamares still sees
+# every disk — do not disable the internal drive in firmware.
+exit 0

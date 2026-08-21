@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# One-click language toolchains. Prefers mise; falls back to repo packages.
+set -euo pipefail
+# shellcheck source=/usr/share/synapseos/lib.sh
+for _sos_lib in /usr/share/synapseos/lib.sh "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib.sh" "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"; do
+    [[ -f $_sos_lib ]] && { source "$_sos_lib"; break; }
+done
+unset _sos_lib
+
+usage() {
+    echo "Usage: synapseos install dev-env <ruby|node|bun|deno|go|laravel|symfony|php|python|elixir|phoenix|rust|java|zig|ocaml|dotnet|clojure|scala>" >&2
+}
+
+need_mise() {
+    synapseos_have mise || { echo "synapseos: mise is required" >&2; return 1; }
+}
+
+install_php() {
+    synapseos_pkg_add php composer php-sqlite xdebug || true
+    synapseos_pkg_add php composer || synapseos_pkg_add php
+    local php_ini=/etc/php/php.ini
+    if [[ -f $php_ini ]]; then
+        local ext
+        for ext in bcmath intl iconv openssl pdo_sqlite pdo_mysql; do
+            synapseos_sudo sed -i "s/^;extension=${ext}/extension=${ext}/" "$php_ini" || true
+        done
+    fi
+    if [[ :$PATH: != *:"$HOME/.config/composer/vendor/bin":* ]]; then
+        mkdir -p "$HOME/.config"
+        echo 'export PATH="$HOME/.config/composer/vendor/bin:$PATH"' >>"$HOME/.zshrc"
+    fi
+}
+
+if [[ -z ${1:-} ]]; then
+    usage
+    exit 2
+fi
+
+case "$1" in
+    ruby)
+        need_mise
+        synapseos_pkg_add libyaml
+        mise settings add ruby.compile false || true
+        mise use --global ruby@latest
+        echo "gem: --no-document" >"$HOME/.gemrc"
+        mise x ruby -- gem install rails --no-document
+        echo "You can now run: rails new myproject"
+        ;;
+    node)
+        need_mise
+        mise use --global node@latest
+        ;;
+    bun)
+        need_mise
+        mise use --global bun@latest
+        ;;
+    deno)
+        need_mise
+        mise use --global deno@latest
+        ;;
+    go)
+        need_mise
+        mise use --global go@latest
+        ;;
+    php)
+        install_php
+        ;;
+    laravel)
+        install_php
+        need_mise
+        mise use --global node@latest || true
+        composer global require laravel/installer
+        echo "You can now run: laravel new myproject"
+        ;;
+    symfony)
+        install_php
+        synapseos_pkg_add symfony-cli || synapseos_pkg_aur_add symfony-cli
+        echo "You can now run: symfony new --webapp myproject"
+        ;;
+    python)
+        need_mise
+        mise use --global python@latest
+        if ! synapseos_have uv; then
+            synapseos_pkg_add uv || curl -fsSL https://astral.sh/uv/install.sh | sh
+        fi
+        ;;
+    elixir)
+        need_mise
+        mise use --global erlang@latest
+        mise use --global elixir@latest
+        mise x elixir -- mix local.hex --force
+        ;;
+    phoenix)
+        need_mise
+        mise use --global erlang@latest
+        mise use --global elixir@latest
+        mise x elixir -- mix local.hex --force
+        mise x elixir -- mix local.rebar --force
+        mise x elixir -- mix archive.install hex phx_new --force
+        echo "You can now run: mix phx.new my_app"
+        ;;
+    rust)
+        if [[ ! -d $HOME/.rustup ]]; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+        fi
+        echo "Rust is also preinstalled as the Arch rust package."
+        ;;
+    java)
+        need_mise
+        mise use --global java@latest
+        ;;
+    zig)
+        need_mise
+        mise use --global zig@latest
+        mise use --global zls@latest || true
+        ;;
+    ocaml)
+        bash -c "$(curl -fsSL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)"
+        opam init --yes
+        eval "$(opam env)"
+        opam install ocaml-lsp-server odoc ocamlformat utop --yes
+        ;;
+    dotnet)
+        need_mise
+        mise use --global dotnet@latest
+        ;;
+    clojure)
+        need_mise
+        synapseos_pkg_add rlwrap
+        mise use --global clojure@latest
+        ;;
+    scala)
+        need_mise
+        mise use --global java@latest
+        mise use --global scala@latest
+        mise use --global scala-cli@latest
+        ;;
+    *)
+        usage
+        exit 2
+        ;;
+esac
+
+synapseos_done

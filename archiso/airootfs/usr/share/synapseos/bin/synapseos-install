@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+# One-click optional software. Official repos via pacman, AUR via paru.
+set -euo pipefail
+# shellcheck source=/usr/share/synapseos/lib.sh
+for _sos_lib in /usr/share/synapseos/lib.sh "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib.sh" "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"; do
+    [[ -f $_sos_lib ]] && { source "$_sos_lib"; break; }
+done
+unset _sos_lib
+
+BIN=/usr/share/synapseos/bin
+
+usage() {
+    cat <<'EOF'
+Usage: synapseos install <target>
+
+  package                 Fuzzy-pick official packages
+  aur                     Fuzzy-pick AUR packages
+  browser <name>          chrome | brave | edge | firefox | zen
+  editor <name>           vscode | cursor | zed | sublime | helix | emacs | vim
+  terminal <name>         alacritty | foot | ghostty | kitty
+  service <name>          spotify | signal | tailscale | steam | localsend
+  font <name>             cascadia | meslo | fira | iosevka | victor
+  dev-env <name>          node | bun | deno | go | python | rust | java | ...
+  docker-dbs [name...]    MySQL | PostgreSQL | Redis | MongoDB | MariaDB | MSSQL
+  app <label> <packages>  Install named packages and pause
+EOF
+}
+
+install_named() {
+    local label="$1"
+    shift
+    echo "Installing $label..."
+    local official=()
+    local aur=()
+    local pkg
+    for pkg in "$@"; do
+        if pacman -Si "$pkg" >/dev/null 2>&1; then
+            official+=("$pkg")
+        else
+            aur+=("$pkg")
+        fi
+    done
+    (( ${#official[@]} )) && synapseos_pkg_add "${official[@]}"
+    (( ${#aur[@]} )) && synapseos_pkg_aur_add "${aur[@]}"
+    synapseos_done
+}
+
+browser() {
+    case "${1:-}" in
+        chrome) install_named "Chrome" google-chrome ;;
+        brave) install_named "Brave" brave-bin ;;
+        brave-origin) install_named "Brave Origin" brave-origin-bin ;;
+        edge) install_named "Edge" microsoft-edge-stable-bin ;;
+        firefox) install_named "Firefox" firefox ;;
+        zen) install_named "Zen" zen-browser-bin ;;
+        *)
+            echo "Usage: synapseos install browser <chrome|brave|edge|firefox|zen>" >&2
+            return 2
+            ;;
+    esac
+}
+
+editor() {
+    case "${1:-}" in
+        vscode) install_named "VS Code" visual-studio-code-bin ;;
+        cursor) install_named "Cursor" cursor-bin ;;
+        zed) install_named "Zed" zed ;;
+        sublime) install_named "Sublime Text" sublime-text-4 ;;
+        helix) install_named "Helix" helix ;;
+        emacs) install_named "Emacs" emacs ;;
+        vim) install_named "Vim" vim ;;
+        *)
+            echo "Usage: synapseos install editor <vscode|cursor|zed|sublime|helix|emacs|vim>" >&2
+            return 2
+            ;;
+    esac
+}
+
+terminal() {
+    case "${1:-}" in
+        alacritty) install_named "Alacritty" alacritty ;;
+        foot) install_named "Foot" foot ;;
+        ghostty) install_named "Ghostty" ghostty ;;
+        kitty) install_named "Kitty" kitty ;;
+        *)
+            echo "Usage: synapseos install terminal <alacritty|foot|ghostty|kitty>" >&2
+            return 2
+            ;;
+    esac
+}
+
+service() {
+    case "${1:-}" in
+        spotify) install_named "Spotify" spotify ;;
+        signal) install_named "Signal" signal-desktop ;;
+        tailscale)
+            install_named "Tailscale" tailscale
+            synapseos_sudo systemctl enable --now tailscaled.service || true
+            echo "Run: sudo tailscale up"
+            ;;
+        steam)
+            echo "Enabling multilib (Steam is 32-bit)..."
+            synapseos_enable_multilib
+            install_named "Steam" steam
+            ;;
+        localsend)
+            # Official extra does not ship this; AUR package is localsend-bin.
+            install_named "LocalSend" localsend-bin
+            ;;
+        *)
+            echo "Usage: synapseos install service <spotify|signal|tailscale|steam|localsend>" >&2
+            return 2
+            ;;
+    esac
+}
+
+font() {
+    case "${1:-}" in
+        cascadia) install_named "Cascadia Mono" ttf-cascadia-mono-nerd ;;
+        meslo) install_named "Meslo LG Mono" ttf-meslo-nerd ;;
+        fira) install_named "Fira Code" ttf-firacode-nerd ;;
+        iosevka) install_named "Iosevka" ttf-iosevka-nerd ;;
+        victor) install_named "Victor Mono" ttf-victor-mono-nerd ;;
+        *)
+            echo "Usage: synapseos install font <cascadia|meslo|fira|iosevka|victor>" >&2
+            return 2
+            ;;
+    esac
+}
+
+main() {
+    local target="${1:-}"
+    shift || true
+    case "$target" in
+        package|pkg) exec "$BIN/synapseos-pkg" install ;;
+        aur) exec "$BIN/synapseos-pkg" aur ;;
+        browser) browser "${1:-}" ;;
+        editor) editor "${1:-}" ;;
+        terminal) terminal "${1:-}" ;;
+        service) service "${1:-}" ;;
+        font) font "${1:-}" ;;
+        dev-env) exec "$BIN/synapseos-install-dev-env" "$@" ;;
+        docker-dbs|docker-db) exec "$BIN/synapseos-install-docker-dbs" "$@" ;;
+        app)
+            (( $# >= 2 )) || { echo "Usage: synapseos install app <label> <packages...>" >&2; return 2; }
+            install_named "$@"
+            ;;
+        -h|--help|help|"") usage ;;
+        *)
+            echo "synapseos install: unknown target '$target'" >&2
+            usage >&2
+            return 2
+            ;;
+    esac
+}
+
+main "$@"

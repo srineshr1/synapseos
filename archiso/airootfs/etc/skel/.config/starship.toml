@@ -1,0 +1,25 @@
+add_newline = false
+
+format = """
+$directory$git_branch$git_status$cmd_duration$character
+"""
+
+[character]
+success_symbol = "[❯](#c6a0f6)"
+error_symbol = "[❯](#ed8796)"
+vimcmd_symbol = "[❮](#8aadf4)"
+
+[directory]
+style = "bold #8aadf4"
+truncation_length = 3
+
+[git_branch]
+symbol = " "
+style = "#a6da95"
+
+[git_status]
+style = "#eed49f"
+
+[cmd_duration]
+min_time = 2000
+style = "#f5a97f"

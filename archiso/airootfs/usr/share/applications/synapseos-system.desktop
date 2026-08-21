@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Power Menu
+Comment=Lock, log out, reboot, shut down
+Exec=synapseos menu system
+Icon=system-shutdown
+Terminal=false
+Categories=System;
+NoDisplay=true
+X-KDE-Shortcuts=Meta+Escape

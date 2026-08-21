@@ -1,0 +1,6 @@
+[General]
+type=image
+color=#181926
+background=/usr/share/backgrounds/synapseos/desktop.png
+showClock=true
+showlogo=hidden

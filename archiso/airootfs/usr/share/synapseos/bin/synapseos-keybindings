@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# shellcheck source=/usr/share/synapseos/lib.sh
+for _sos_lib in /usr/share/synapseos/lib.sh "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib.sh" "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"; do
+    [[ -f $_sos_lib ]] && { source "$_sos_lib"; break; }
+done
+unset _sos_lib
+
+file=/usr/share/synapseos/keybindings.txt
+if synapseos_have bat; then
+    bat --style=plain --paging=always "$file"
+else
+    ${PAGER:-less} -R "$file"
+fi

@@ -60,7 +60,53 @@ live filesystem, in the installed system too.
 | Assistant   | Super+S overlay, `synapse-core` user service, `synapsectl`, OS MCP (`synapseos-mcp`) |
 | AI agents   | claude-code (`claude`), openai-codex-bin (`codex`), opencode-bin (`opencode`) |
 | AUR helper  | paru                                                                     |
-| CLI         | ripgrep, fd, fzf, jq, yq, bat, eza, just, tokei, hyperfine, httpie, shellcheck, 7zip |
+| CLI         | ripgrep, fd, fzf, jq, yq, bat, eza, just, tokei, hyperfine, httpie, shellcheck, 7zip, btop, starship, zoxide, gum, mise, lazydocker, dua-cli, plocate, yt-dlp, wl-clipboard |
+| Media / share | mpv (LocalSend is Super+Space → Install → Service) |
+
+### Super+ shortcuts (Omarchy-style)
+
+Plasma keeps its own window management. Everyday launch and install keys match Omarchy:
+
+| Shortcut | Action |
+| -------- | ------ |
+| Super+Shift+Space | Hyprland tiling on/off (off restores window positions) |
+| Super+T | Float / retile the active window (while tiling) |
+| Super+W | Close window |
+| Super+F | Fullscreen |
+| Super+Arrows | Focus window in that direction |
+| Super+Shift+Arrows | Swap window in that direction |
+| Super+1 … 9 / 0 | Switch desktop |
+| Super+Shift+1 … 0 | Move window to that desktop |
+| Super+Tab | Next desktop |
+| Super+Space | System menu (apps, one-click install, power) |
+| Super+Alt+Space | KRunner |
+| Super+Return | Terminal |
+| Super+Shift+Return / Super+Shift+B | Browser |
+| Super+Shift+F | Files |
+| Super+Shift+N | Editor |
+| Super+K | Shortcut cheat sheet |
+| Super+Escape | Lock / logout / reboot / shutdown |
+| Super+Ctrl+L | Lock |
+| Super+Ctrl+T | btop |
+| Super+Shift+D | lazydocker |
+| Super+S | Synapse assistant |
+| Print | Screenshot |
+
+```
+synapseos                  # same menu from a terminal
+synapseos install package  # fuzzy-pick official packages
+synapseos install aur      # fuzzy-pick the AUR (paru)
+synapseos install browser chrome
+synapseos install editor zed
+synapseos install dev-env node
+synapseos install docker-dbs
+synapseos pkg add <pkgs>
+synapseos toggle tiling        # same as Super+Shift+Space
+```
+
+Tiling is a switch, not the default. Two windows stay where you put them until you turn Hyprland mode on; they go back to those positions when you turn it off.
+
+One-click extras (browsers, editors, language toolchains, Docker databases, Spotify / Signal / Tailscale / Steam) are **not** on the ISO. Super+Space → Install, or `synapseos install …`, pulls them when you ask.
 
 ### Synapse assistant
 
@@ -297,6 +343,43 @@ sudo ./tools/live-hotfix-kernel.sh   # then launch the installer again
 The script only edits `/etc/calamares/modules/{mount,shellprocess-prepare}.conf`
 on the live overlay (originals kept as `*.orig`) and is idempotent.
 
+### Live USB used all the RAM and crashed
+
+The live session used to copy the whole squashfs into RAM whenever
+archiso thought there was enough memory (`copytoram=auto`). On an 8G
+machine that is a 4G image plus Plasma plus a browser, so the OOM
+killer takes the session down.
+
+Default boot now keeps the image on the USB (`copytoram=n`) and caps
+the writable overlay at 1G (`cow_spacesize=1G`). Leave the stick
+plugged in. Advanced → **Copy to RAM (16G+)** is still there if you
+want to eject the media.
+
+This is live-only. An installed system already runs from disk.
+
+### Live boot freezes: `ata` timeouts / systemd "Freezing execution"
+
+Do **not** disable the internal hard disk — Calamares needs it to
+install. The freeze is PID 1 probing a slow or flaky SATA drive
+(common on 8th-gen ThinkPads) and then failing to run generators.
+
+Default live boot now:
+
+- `libata.force=noncq` — stops `READ FPDMA QUEUED` timeouts; the disk
+  stays visible for the installer
+- `systemd.gpt_auto=no` — systemd does not auto-mount internal GPT
+  partitions during live boot; Calamares still lists them
+- a real no-op at
+  `/etc/systemd/system-generators/systemd-gpt-auto-generator` (an empty
+  file is not valid ELF and systemd 253+ freezes with `Invalid ELF
+  header magic` / `Failed to fork off sandboxing environment`)
+
+`tdx not supported by the host platform` is a kernel probe. 8th-gen
+Intel has no TDX; ignore it. Safe graphics will not fix a SATA freeze.
+
+If the installer then reports I/O errors on `sda`, the drive itself is
+failing and needs replacing. The live session can still run from USB.
+
 ### Desktop dies when you minimise a window or open an app
 
 That is KWin failing to compose (usually missing 3D in a VM), not the
@@ -373,13 +456,9 @@ delete that block and restore `rm -f /etc/motd` at the end of the script.
 
 ## Boot / desktop diagnostics
 
-The live boot entries are verbose on purpose: kernel and systemd messages are
-shown so a failure is visible on screen. `quiet loglevel=3
-systemd.show_status=false rd.systemd.show_status=false
-vt.global_cursor_default=0` now lives only on the extra "quiet boot" entry in
-`archiso/grub/grub.cfg` and `archiso/syslinux/archiso_sys-linux.cfg`. The
-installed system still boots quietly (`airootfs/etc/default/grub` and
-`modules/grubcfg.conf`).
+The default live entry is a quiet splash. Advanced → **Verbose** shows
+kernel and systemd messages. The installed system still boots quietly
+(`airootfs/etc/default/grub` and `modules/grubcfg.conf`).
 
 Plasma is autostarted on tty1 by `/home/live/.zprofile`, which calls
 `synapseos-plasma`. That wrapper runs `startplasma-wayland`, tees the

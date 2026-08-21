@@ -1,6 +1,20 @@
 [General]
-count=3
-rules=a11e0001-5e0f-4b10-9c0d-000000000002,a11e0001-5e0f-4b10-9c0d-000000000003,a11e0001-5e0f-4b10-9c0d-000000000001
+count=4
+rules=a11e0001-5e0f-4b10-9c0d-000000000004,a11e0001-5e0f-4b10-9c0d-000000000002,a11e0001-5e0f-4b10-9c0d-000000000003,a11e0001-5e0f-4b10-9c0d-000000000001
+
+[a11e0001-5e0f-4b10-9c0d-000000000004]
+Description=SynapseOS menu
+Enabled=true
+above=true
+aboverule=2
+wmclass=org.synapseos.menu
+wmclasscomplete=false
+wmclassmatch=1
+types=1
+size=900,620
+sizerule=3
+placement=4
+placementrule=2
 
 [a11e0001-5e0f-4b10-9c0d-000000000002]
 Description=Opaque browsers
@@ -21,7 +35,7 @@ opacityactive=78
 opacityactiverule=2
 opacityinactive=62
 opacityinactiverule=2
-wmclass=kitty|konsole|Alacritty|org.kde.konsole
+wmclass=kitty|konsole|Alacritty|org.kde.konsole|org.synapseos.menu
 wmclasscomplete=false
 wmclassmatch=3
 types=1

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=App Launcher
+Comment=Open KRunner
+Exec=krunner
+Icon=synapseos-launcher
+Terminal=false
+Categories=System;
+NoDisplay=true
+X-KDE-Shortcuts=Meta+Alt+Space

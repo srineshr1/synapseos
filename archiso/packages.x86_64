@@ -286,6 +286,18 @@ tealdeer
 zip
 unzip
 7zip
+# Omarchy-style daily-driver CLI. One-click extras stay off the ISO.
+btop
+starship
+zoxide
+gum
+mise
+lazydocker
+wl-clipboard
+dua-cli
+plocate
+yt-dlp
+mpv
 
 # ---- Browsers ----
 # firefox is above; helium-browser-bin is a Chromium fork from the AUR.

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Toggle session features. Hyprland mode lives in the KWin script.
+set -euo pipefail
+# shellcheck source=/usr/share/synapseos/lib.sh
+for _sos_lib in /usr/share/synapseos/lib.sh "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib.sh" "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"; do
+    [[ -f $_sos_lib ]] && { source "$_sos_lib"; break; }
+done
+unset _sos_lib
+
+usage() {
+    cat <<'EOF'
+Usage: synapseos toggle <feature>
+
+  tiling | hyprland | tile   Hyprland-style tiling. Off restores positions.
+EOF
+}
+
+invoke_kwin() {
+    local name="$1"
+    if synapseos_have qdbus6; then
+        qdbus6 org.kde.kglobalaccel /component/kwin \
+            org.kde.kglobalaccel.Component.invokeShortcut "$name"
+    elif synapseos_have qdbus; then
+        qdbus org.kde.kglobalaccel /component/kwin \
+            org.kde.kglobalaccel.Component.invokeShortcut "$name"
+    elif synapseos_have gdbus; then
+        gdbus call --session --dest org.kde.kglobalaccel \
+            --object-path /component/kwin \
+            --method org.kde.kglobalaccel.Component.invokeShortcut "$name" \
+            >/dev/null
+    else
+        echo "synapseos: need qdbus6 to toggle KWin shortcuts" >&2
+        return 1
+    fi
+}
+
+cmd="${1:-}"
+case "$cmd" in
+    tiling|hyprland|tile|wm)
+        invoke_kwin "Toggle SynapseOS Hyprland mode"
+        ;;
+    -h|--help|help|"")
+        usage
+        ;;
+    *)
+        echo "synapseos toggle: unknown feature '$cmd'" >&2
+        usage >&2
+        exit 2
+        ;;
+esac

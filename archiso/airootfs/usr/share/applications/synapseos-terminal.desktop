@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Terminal
+GenericName=Terminal
+Comment=Open a terminal
+Exec=synapseos launch terminal
+Icon=utilities-terminal
+Terminal=false
+Categories=System;TerminalEmulator;
+NoDisplay=true
+X-KDE-Shortcuts=Meta+Return

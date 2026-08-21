@@ -49,9 +49,24 @@ glideEnabled=false
 fadeEnabled=false
 synapseosjumpEnabled=false
 synapseosfrostEnabled=true
+synapseostileEnabled=true
 startupfeedbackEnabled=true
 fadingpopupsEnabled=true
 slidingpopupsEnabled=true
+
+[Desktops]
+Number=10
+Rows=1
+Name_1=1
+Name_2=2
+Name_3=3
+Name_4=4
+Name_5=5
+Name_6=6
+Name_7=7
+Name_8=8
+Name_9=9
+Name_10=10
 
 [Compositing]
 OpenGLIsUnsafe=false

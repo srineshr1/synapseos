@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Launch or focus everyday apps. Used by Super+ shortcuts.
+set -euo pipefail
+# shellcheck source=/usr/share/synapseos/lib.sh
+for _sos_lib in /usr/share/synapseos/lib.sh "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib.sh" "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"; do
+    [[ -f $_sos_lib ]] && { source "$_sos_lib"; break; }
+done
+unset _sos_lib
+
+usage() {
+    cat <<'EOF'
+Usage: synapseos launch <target>
+
+  terminal          Kitty (or the configured terminal)
+  browser           Default browser
+  files [cwd]       Dolphin
+  editor            VS Code / Helix / Neovim / Kate
+  tui <cmd...>      Command in a floating terminal
+  webapp <url>      Site as an app window
+  menu              Super+Space menu
+EOF
+}
+
+cmd="${1:-}"
+shift || true
+
+case "$cmd" in
+    terminal)
+        synapseos_terminal >/dev/null 2>&1 &
+        ;;
+    browser)
+        synapseos_default_browser
+        ;;
+    files|file-manager|dolphin)
+        if [[ -n ${1:-} ]]; then
+            dolphin --new-window "$1" >/dev/null 2>&1 &
+        else
+            dolphin >/dev/null 2>&1 &
+        fi
+        ;;
+    editor)
+        synapseos_default_editor
+        ;;
+    tui)
+        (( $# >= 1 )) || { echo "Usage: synapseos launch tui <command...>" >&2; exit 2; }
+        synapseos_float "${1##*/}" "$@"
+        ;;
+    webapp)
+        (( $# >= 1 )) || { echo "Usage: synapseos launch webapp <url>" >&2; exit 2; }
+        synapseos_webapp "$1"
+        ;;
+    menu)
+        exec /usr/share/synapseos/bin/synapseos-menu
+        ;;
+    -h|--help|help|"")
+        usage
+        ;;
+    *)
+        echo "synapseos launch: unknown target '$cmd'" >&2
+        usage >&2
+        exit 2
+        ;;
+esac

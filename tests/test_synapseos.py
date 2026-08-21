@@ -355,9 +355,10 @@ class DesktopConfigTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         # Browsers must be listed before the catch-all or they stay translucent.
         self.assertIn(
-            "rules=a11e0001-5e0f-4b10-9c0d-000000000002,a11e0001-5e0f-4b10-9c0d-000000000003,a11e0001-5e0f-4b10-9c0d-000000000001",
+            "rules=a11e0001-5e0f-4b10-9c0d-000000000004,a11e0001-5e0f-4b10-9c0d-000000000002,a11e0001-5e0f-4b10-9c0d-000000000003,a11e0001-5e0f-4b10-9c0d-000000000001",
             rules,
         )
+        self.assertIn("org.synapseos.menu", rules)
         chrome = ROOT / "archiso/airootfs/usr/bin/synapseos-apply-chrome"
         self.assertTrue(chrome.is_file())
         text = chrome.read_text(encoding="utf-8")
@@ -435,6 +436,7 @@ class DesktopConfigTests(unittest.TestCase):
             ROOT / "archiso/airootfs/root/customize_airootfs.sh"
         ).read_text(encoding="utf-8")
         self.assertIn("aether.desktop", custom)
+        self.assertIn("kwin-wayland/scripts/synapseostile", custom)
 
     def test_plymouth_is_wired(self) -> None:
         pkgs = (ROOT / "archiso/packages.x86_64").read_text(encoding="utf-8")
@@ -463,7 +465,20 @@ class DesktopConfigTests(unittest.TestCase):
         default_block = grub.split("menuentry \"SynapseOS\"", 1)[1].split("submenu", 1)[0]
         self.assertIn("quiet", default_block)
         self.assertIn("splash", default_block)
+        self.assertIn("copytoram=n", default_block)
+        self.assertIn("cow_spacesize=1G", default_block)
+        self.assertIn("systemd.gpt_auto=no", default_block)
+        self.assertIn("libata.force=noncq", default_block)
+        self.assertNotIn("copytoram=y", default_block)
         self.assertNotIn("safegfx", default_block)
+        gen = (
+            ROOT
+            / "archiso/airootfs/etc/systemd/system-generators/"
+            "systemd-gpt-auto-generator"
+        ).read_text(encoding="utf-8")
+        self.assertTrue(gen.startswith("#!"))
+        self.assertIn("exit 0", gen)
+        self.assertGreater(len(gen.strip()), 20)
         self.assertIn("timeout=5", grub)
         self.assertNotIn("selected_item_pixmap_style", grub)
         theme = (ROOT / "archiso/grub/theme/theme.txt").read_text(encoding="utf-8")
@@ -479,20 +494,58 @@ class DesktopConfigTests(unittest.TestCase):
         self.assertIn('"splash"', grubcfg)
         self.assertIn("GRUB_TIMEOUT: 3", grubcfg)
 
+    def test_live_boot_does_not_copy_the_os_into_ram(self) -> None:
+        grub = (ROOT / "archiso/grub/grub.cfg").read_text(encoding="utf-8")
+        default_block = grub.split('menuentry "SynapseOS"', 1)[1].split("submenu", 1)[0]
+        self.assertIn("copytoram=n", default_block)
+        self.assertIn("systemd.gpt_auto=no", default_block)
+        self.assertIn("libata.force=noncq", default_block)
+        self.assertNotIn("copytoram=y", default_block)
+        self.assertIn("archlinux-copytoram", grub)
+        ram_block = grub.split("archlinux-copytoram", 1)[1].split("}", 1)[0]
+        self.assertIn("copytoram=y", ram_block)
+        self.assertIn("systemd.gpt_auto=no", ram_block)
+        self.assertIn("libata.force=noncq", ram_block)
+        loop = (ROOT / "archiso/grub/loopback.cfg").read_text(encoding="utf-8")
+        loop_default = loop.split('menuentry "SynapseOS"', 1)[1].split("submenu", 1)[0]
+        self.assertIn("copytoram=n", loop_default)
+        self.assertIn("systemd.gpt_auto=no", loop_default)
+        self.assertIn("libata.force=noncq", loop_default)
+        syslinux = (
+            ROOT / "archiso/syslinux/archiso_sys-linux.cfg"
+        ).read_text(encoding="utf-8")
+        first_append = [
+            line for line in syslinux.splitlines() if line.startswith("APPEND ")
+        ][0]
+        self.assertIn("copytoram=n", first_append)
+        self.assertIn("cow_spacesize=1G", first_append)
+        self.assertIn("systemd.gpt_auto=no", first_append)
+        self.assertIn("libata.force=noncq", first_append)
+        self.assertIn("copytoram=y", syslinux)
+        pxe = (
+            ROOT / "archiso/syslinux/archiso_pxe-linux.cfg"
+        ).read_text(encoding="utf-8")
+        self.assertIn("copytoram=n", pxe)
+        installed = (
+            ROOT / "archiso/airootfs/etc/default/grub"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("copytoram", installed)
+
     def test_sddm_and_ksplash_are_synapseos(self) -> None:
         sddm = (
             ROOT / "archiso/airootfs/etc/sddm.conf.d/10-synapseos.conf"
         ).read_text(encoding="utf-8")
-        self.assertIn("Current=synapseos", sddm)
-        main = (
-            ROOT / "archiso/airootfs/usr/share/sddm/themes/synapseos/Main.qml"
-        ).read_text(encoding="utf-8")
-        self.assertIn('color: "#181926"', main)
-        self.assertIn("sddm.login", main)
+        self.assertIn("Current=breeze", sddm)
+        breeze_user = (
+            ROOT / "archiso/airootfs/usr/share/sddm/themes/breeze/theme.conf.user"
+        )
+        self.assertTrue(breeze_user.is_file())
+        breeze_conf = breeze_user.read_text(encoding="utf-8")
+        self.assertIn("/usr/share/backgrounds/synapseos/desktop.png", breeze_conf)
+        self.assertIn("showClock=true", breeze_conf)
         self.assertTrue(
             (
-                ROOT
-                / "archiso/airootfs/usr/share/sddm/themes/synapseos/logo.png"
+                ROOT / "archiso/airootfs/usr/share/backgrounds/synapseos/desktop.png"
             ).is_file()
         )
         defaults = (
@@ -527,6 +580,123 @@ class DesktopConfigTests(unittest.TestCase):
         )
         pkgs = (ROOT / "archiso/packages.x86_64").read_text(encoding="utf-8")
         self.assertRegex(pkgs, r"(?m)^obs-studio$")
+
+    def test_omarchy_style_workflow_is_wired(self) -> None:
+        cli = ROOT / "archiso/airootfs/usr/bin/synapseos"
+        self.assertTrue(cli.is_file())
+        self.assertTrue(stat.S_IXUSR & cli.stat().st_mode)
+        text = cli.read_text(encoding="utf-8")
+        self.assertIn("synapseos-menu", text)
+        self.assertIn("synapseos-install", text)
+        self.assertIn("synapseos-pkg", text)
+        for name in (
+            "synapseos-menu",
+            "synapseos-install",
+            "synapseos-install-dev-env",
+            "synapseos-install-docker-dbs",
+            "synapseos-pkg",
+            "synapseos-launch",
+            "synapseos-keybindings",
+            "synapseos-toggle",
+        ):
+            path = ROOT / "archiso/airootfs/usr/share/synapseos/bin" / name
+            self.assertTrue(path.is_file(), name)
+            self.assertTrue(stat.S_IXUSR & path.stat().st_mode, name)
+        keys = (
+            ROOT / "archiso/airootfs/usr/share/synapseos/keybindings.txt"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Super + Space", keys)
+        self.assertIn("Super + Return", keys)
+        shortcuts = (
+            ROOT / "archiso/airootfs/etc/xdg/kglobalshortcutsrc"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Meta+Space", shortcuts)
+        self.assertIn("Meta+Return", shortcuts)
+        self.assertIn("Meta+Shift+F", shortcuts)
+        self.assertIn("Meta+K", shortcuts)
+        self.assertIn("synapseos-menu.desktop", shortcuts)
+        skel_keys = (
+            ROOT / "archiso/airootfs/etc/skel/.config/kglobalshortcutsrc"
+        ).read_text(encoding="utf-8")
+        self.assertEqual(shortcuts, skel_keys)
+        menu_desk = (
+            ROOT / "archiso/airootfs/usr/share/applications/synapseos-menu.desktop"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Exec=synapseos menu", menu_desk)
+        self.assertIn("X-KDE-Shortcuts=Meta+Space", menu_desk)
+        zshrc = (ROOT / "archiso/airootfs/etc/skel/.zshrc.local").read_text(
+            encoding="utf-8"
+        )
+        self.assertFalse(
+            (ROOT / "archiso/airootfs/etc/skel/.zshrc").exists(),
+            "airootfs must not ship /etc/skel/.zshrc; grml-zsh-config owns it",
+        )
+        self.assertIn("starship init zsh", zshrc)
+        self.assertIn("zoxide init zsh", zshrc)
+        self.assertIn("mise activate zsh", zshrc)
+        pkgs = (ROOT / "archiso/packages.x86_64").read_text(encoding="utf-8")
+        for pkg in (
+            "btop",
+            "starship",
+            "zoxide",
+            "gum",
+            "mise",
+            "lazydocker",
+            "wl-clipboard",
+            "mpv",
+        ):
+            self.assertRegex(pkgs, rf"(?m)^{pkg}$")
+        install = (
+            ROOT / "archiso/airootfs/usr/share/synapseos/bin/synapseos-install"
+        ).read_text(encoding="utf-8")
+        self.assertIn("dev-env", install)
+        self.assertIn("docker-dbs", install)
+        self.assertIn("browser", install)
+
+    def test_hyprland_mode_toggle_is_wired(self) -> None:
+        script = (
+            ROOT / "archiso/airootfs/usr/share/kwin/scripts/synapseostile"
+            / "contents/code/main.js"
+        )
+        self.assertTrue(script.is_file())
+        js = script.read_text(encoding="utf-8")
+        self.assertIn("Meta+Shift+Space", js)
+        self.assertIn("saved[key]", js)
+        self.assertIn("restoreAll", js)
+        self.assertIn("dwindle", js)
+        self.assertIn('"Meta+" + key', js)
+        self.assertIn("desktopKeys", js)
+        meta = (
+            ROOT / "archiso/airootfs/usr/share/kwin/scripts/synapseostile"
+            / "metadata.json"
+        ).read_text(encoding="utf-8")
+        self.assertIn('"Id": "synapseostile"', meta)
+        for rel in (
+            "archiso/airootfs/etc/xdg/kwinrc",
+            "archiso/airootfs/etc/skel/.config/kwinrc",
+        ):
+            text = (ROOT / rel).read_text(encoding="utf-8")
+            self.assertIn("synapseostileEnabled=true", text, rel)
+            self.assertIn("Number=10", text, rel)
+        shortcuts = (
+            ROOT / "archiso/airootfs/etc/xdg/kglobalshortcutsrc"
+        ).read_text(encoding="utf-8")
+        self.assertIn("activate task manager entry 1=none,Meta+1", shortcuts)
+        self.assertIn("toggle tiling", (
+            ROOT / "archiso/airootfs/usr/bin/synapseos"
+        ).read_text(encoding="utf-8"))
+        toggle = (
+            ROOT / "archiso/airootfs/usr/share/synapseos/bin/synapseos-toggle"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Toggle SynapseOS Hyprland mode", toggle)
+        menu = (
+            ROOT / "archiso/airootfs/usr/share/synapseos/bin/synapseos-menu"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Hyprland tiling", menu)
+        keys = (
+            ROOT / "archiso/airootfs/usr/share/synapseos/keybindings.txt"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Super + Shift + Space", keys)
 
     def test_calamares_branding_is_one_mark(self) -> None:
         desc = (

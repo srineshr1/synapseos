@@ -1,0 +1,43 @@
+SynapseOS shortcuts  (Omarchy-style, Plasma)
+
+  Super + Shift + Space     Hyprland tiling on/off (restores windows)
+  Super + T                 Float / retile this window (while tiling)
+  Super + W                 Close window
+  Super + F                 Fullscreen
+  Super + Arrows            Focus window
+  Super + Shift + Arrows    Swap window
+  Super + 1 … 9 / 0         Desktop 1–10
+  Super + Shift + 1 … 0     Move window to that desktop
+  Super + Tab               Next desktop
+  Super + Shift + Tab       Previous desktop
+
+  Super + S                 Synapse assistant
+  Super + Space             System menu (apps, install, power)
+  Super + Alt + Space       App launcher (KRunner)
+  Super + Return            Terminal
+  Super + Shift + Return    Browser
+  Super + Shift + B         Browser
+  Super + Shift + F         Files
+  Super + Shift + N         Editor
+  Super + K                 This cheat sheet
+  Super + Escape            Power menu
+  Super + Ctrl + L          Lock
+  Super + Ctrl + T          btop
+  Super + Shift + D         lazydocker
+  Print                     Screenshot (Spectacle)
+  Ctrl + Alt + T            Terminal
+  Ctrl + Alt + S            Pause Synapse
+
+Menu → Install
+  Package                   Fuzzy-pick from official repos
+  AUR                       Fuzzy-pick from the AUR (paru)
+  Browser / Editor / Terminal
+  Development               Node, Bun, Deno, Go, Python, Rust, …
+  Docker DB                 MySQL, Postgres, Redis, Mongo, …
+  Service                   Spotify, Signal, Tailscale, Steam
+
+CLI
+  synapseos                 Same menu from a terminal
+  synapseos install …       One-click extras
+  synapseos pkg install     Fuzzy package picker
+  synapseos launch terminal
