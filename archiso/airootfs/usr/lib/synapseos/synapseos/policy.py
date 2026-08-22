@@ -81,6 +81,11 @@ PROTECTED_COMM = {
     "agetty",
     "hyprland",
     "Hyprland",
+    "quickshell",
+    "qs",
+    "caelestia-shell",
+    "greetd",
+    "tuigreet",
     "waybar",
 }
 

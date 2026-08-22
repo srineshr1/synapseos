@@ -38,7 +38,7 @@ menu_apps() {
     case "$choice" in
         Terminal) synapseos_terminal >/dev/null 2>&1 & ;;
         Browser) synapseos_default_browser ;;
-        Files) dolphin >/dev/null 2>&1 & ;;
+        Files) thunar >/dev/null 2>&1 & ;;
         Editor) synapseos_default_editor ;;
         btop) synapseos_float btop btop ;;
         lazygit) synapseos_float lazygit lazygit ;;
@@ -184,11 +184,7 @@ menu_system() {
     case "$choice" in
         Lock) loginctl lock-session ;;
         Logout)
-            if synapseos_have qdbus6; then
-                qdbus6 org.kde.Shutdown /Shutdown logout || loginctl terminate-session "${XDG_SESSION_ID:-}"
-            else
-                loginctl terminate-session "${XDG_SESSION_ID:-}"
-            fi
+            loginctl terminate-session "${XDG_SESSION_ID:-}"
             ;;
         Reboot) systemctl reboot ;;
         Shutdown) systemctl poweroff ;;
@@ -198,10 +194,10 @@ menu_system() {
 menu_toggle() {
     local choice
     choice=$(pick "Toggle" \
-        "Hyprland tiling" \
+        "Float window" \
         "$back") || return 0
     case "$choice" in
-        "Hyprland tiling") "$BIN/synapseos-toggle" tiling ;;
+        "Float window") "$BIN/synapseos-toggle" floating ;;
     esac
 }
 

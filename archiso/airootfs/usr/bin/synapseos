@@ -19,7 +19,7 @@ Usage:
   synapseos install …           One-click optional software
   synapseos pkg …               Package add / remove / fuzzy install
   synapseos launch …            Terminal, browser, files, editor, webapp
-  synapseos toggle tiling       Hyprland-style tiling (off restores windows)
+  synapseos toggle floating     Float / tile the active window
   synapseos keybindings         Shortcut cheat sheet
 
 Examples:

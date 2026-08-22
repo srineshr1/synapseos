@@ -67,8 +67,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"synapseos-overlay needs PySide6: {exc}", file=sys.stderr)
         return 1
 
+    os.environ.setdefault("QT_WAYLAND_APP_ID", "org.synapseos.overlay")
     app = QApplication(sys.argv)
     app.setApplicationName("Synapse")
+    app.setDesktopFileName("synapseos-assistant")
     app.setQuitOnLastWindowClosed(True)
 
     win = Overlay()

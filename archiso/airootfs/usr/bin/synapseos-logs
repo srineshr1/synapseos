@@ -46,7 +46,7 @@ have() { command -v "$1" > /dev/null 2>&1; }
     # restarts and takes every window with it.
     if have coredumpctl; then
         coredumpctl list --no-pager 2> /dev/null | tail -n 25
-        for prog in kwin_wayland kwin_x11 plasmashell sddm; do
+        for prog in Hyprland hyprland quickshell qs caelestia-shell greetd tuigreet; do
             if coredumpctl info "$prog" > /dev/null 2>&1; then
                 section "coredumpctl info $prog (most recent)"
                 coredumpctl info "$prog" 2> /dev/null | head -n 120
@@ -57,17 +57,19 @@ have() { command -v "$1" > /dev/null 2>&1; }
     fi
 
     section "compositor messages this boot"
-    journalctl -b --no-pager _COMM=kwin_wayland 2> /dev/null | tail -n 100
-    journalctl -b --no-pager _COMM=plasmashell 2> /dev/null | tail -n 80
-    journalctl -b --no-pager -u sddm 2> /dev/null | tail -n 80
+    journalctl -b --no-pager _COMM=Hyprland 2> /dev/null | tail -n 100
+    journalctl -b --no-pager _COMM=hyprland 2> /dev/null | tail -n 80
+    journalctl -b --no-pager -u greetd 2> /dev/null | tail -n 80
 
     section "compositor workaround variables"
-    printf 'KWIN_COMPOSE=%s\n' "${KWIN_COMPOSE:-unset}"
+    printf 'WLR_RENDERER=%s\n' "${WLR_RENDERER:-unset}"
+    printf 'QT_QUICK_BACKEND=%s\n' "${QT_QUICK_BACKEND:-unset}"
+    printf 'AQ_NO_MODIFIERS=%s\n' "${AQ_NO_MODIFIERS:-unset}"
     have systemd-detect-virt && echo "virtualisation: $(systemd-detect-virt)"
 
-    section "plasma-session log"
-    cat "${XDG_CACHE_HOME:-$HOME/.cache}/synapseos/plasma-session.log" 2> /dev/null \
-        || echo "(no plasma-session log - the desktop was never started from tty1)"
+    section "session log"
+    cat "${XDG_CACHE_HOME:-$HOME/.cache}/synapseos/session.log" 2> /dev/null \
+        || echo "(no session log - the desktop was never started from tty1)"
 
     section "calamares log"
     cat "$HOME/.cache/calamares/session.log" 2> /dev/null \

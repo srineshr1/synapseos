@@ -3,8 +3,9 @@
 # which pacman.conf exposes to mkarchiso as the [synapseos-local] repository.
 #
 # Run as a normal user (makepkg refuses to run as root). Most packages are
-# binary repacks. kwin-effects-better-blur-dx is compiled against the host
-# kwin — rebuild it after a kwin upgrade. Dependency checks are skipped (-d).
+# binary repacks. quickshell-git and caelestia-shell are compiled. Dependency
+# checks are skipped (-d), which also breaks the caelestia-cli / caelestia-shell
+# circular optional depends.
 #
 #   ./tools/build-aur.sh              # build all packages
 #   ./tools/build-aur.sh opencode-bin # build just one
@@ -16,7 +17,15 @@ PACKAGES=(
     opencode-bin        # opencode agent         -> provides `opencode`
     helium-browser-bin  # Helium browser (Chromium fork)
     paru-bin            # AUR helper, so the installed system can use the AUR
-    kwin-effects-better-blur-dx  # force-blur windows (Hyprland-style frost)
+    libcava
+    ttf-rubik-vf
+    papirus-folders
+    darkly-bin
+    pwvucontrol
+    qtengine
+    quickshell-git      # compile; pin via the AUR PKGBUILD
+    caelestia-cli
+    caelestia-shell
 )
 
 if (( $# )); then

@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Start the Hyprland + Caelestia session and keep a readable log of it.
+#
+# Autostarted from /home/live/.zprofile on tty1. A wrapper instead of a bare
+# exec so a compositor that fails leaves a shell and a log, not a getty loop.
+set -uo pipefail
+
+LOG_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/synapseos"
+LOG="$LOG_DIR/session.log"
+mkdir -p "$LOG_DIR"
+
+session=(Hyprland)
+
+{
+    echo "=== hyprland start: $(date -Is) ==="
+    echo "tty=$(tty) user=$(id -un) seat=${XDG_SEAT:-unset} vtnr=${XDG_VTNR:-unset}"
+    echo "cmdline: $(cat /proc/cmdline)"
+    echo "drm devices: $(ls /dev/dri 2>/dev/null | tr '\n' ' ')"
+} >> "$LOG"
+
+export SYNAPSEOS_SESSION_AUTOSTART="${SYNAPSEOS_SESSION_AUTOSTART:-1}"
+export XDG_SESSION_TYPE="${XDG_SESSION_TYPE:-wayland}"
+export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-Hyprland}"
+export XDG_SESSION_DESKTOP="${XDG_SESSION_DESKTOP:-Hyprland}"
+unset GTK_IM_MODULE QT_IM_MODULE GLFW_IM_MODULE
+
+# shellcheck disable=SC1091
+[ -r /etc/profile.d/synapseos-graphics.sh ] && . /etc/profile.d/synapseos-graphics.sh
+# shellcheck disable=SC1091
+[ -r /etc/profile.d/synapseos-ssh-agent.sh ] && . /etc/profile.d/synapseos-ssh-agent.sh
+
+{
+    echo "SSH_AUTH_SOCK=${SSH_AUTH_SOCK:-unset}"
+    echo "WLR_RENDERER=${WLR_RENDERER:-unset}"
+    echo "AQ_NO_MODIFIERS=${AQ_NO_MODIFIERS:-unset}"
+    echo "QT_QUICK_BACKEND=${QT_QUICK_BACKEND:-unset}"
+    echo "QSG_RHI_BACKEND=${QSG_RHI_BACKEND:-unset}"
+    command -v systemd-detect-virt > /dev/null 2>&1 && echo "virtualisation: $(systemd-detect-virt)"
+} >> "$LOG"
+
+"${session[@]}" 2>&1 | tee -a "$LOG"
+status=${PIPESTATUS[0]}
+
+echo "=== hyprland exited with status $status: $(date -Is) ===" >> "$LOG"
+
+if (( status != 0 )); then
+    printf '\n'
+    echo "Hyprland session failed to start (exit $status)."
+    echo "Last lines of $LOG:"
+    tail -n 25 "$LOG"
+    printf '\n'
+    echo "Full log:        $LOG"
+    echo "Boot messages:   journalctl -b --no-pager"
+    echo "Collect all:     synapseos-logs"
+    echo "Retry manually:  synapseos-session"
+fi
+
+exit "$status"

@@ -133,6 +133,9 @@ class PolicyTests(unittest.TestCase):
         self.assertTrue(is_protected(pid=1))
         self.assertTrue(is_protected(comm="kwin_wayland"))
         self.assertTrue(is_protected(comm="plasmashell"))
+        self.assertTrue(is_protected(comm="Hyprland"))
+        self.assertTrue(is_protected(comm="quickshell"))
+        self.assertTrue(is_protected(comm="caelestia-shell"))
         self.assertFalse(is_protected(comm="firefox", pid=4417))
 
     def test_observe_blocks_launch(self) -> None:
@@ -281,106 +284,90 @@ class ConfigTests(unittest.TestCase):
 
 
 class DesktopConfigTests(unittest.TestCase):
-    def test_kwin_uses_breeze_decorations(self) -> None:
-        for rel in (
-            "archiso/airootfs/etc/xdg/kwinrc",
-            "archiso/airootfs/etc/skel/.config/kwinrc",
-            "archiso/airootfs/usr/share/plasma/look-and-feel/"
-            "Catppuccin-Macchiato-Mauve/contents/defaults",
+    def test_caelestia_session_is_wired(self) -> None:
+        pkgs = (ROOT / "archiso/packages.x86_64").read_text(encoding="utf-8")
+        for pkg in (
+            "hyprland",
+            "caelestia-shell",
+            "caelestia-cli",
+            "quickshell-git",
+            "greetd",
+            "greetd-tuigreet",
+            "thunar",
+            "foot",
         ):
-            text = (ROOT / rel).read_text(encoding="utf-8")
-            self.assertIn("library=org.kde.breeze", text, rel)
-            self.assertIn("theme=Breeze", text, rel)
-            self.assertNotIn("aurorae", text, rel)
+            self.assertRegex(pkgs, rf"(?m)^{pkg}$", pkg)
+        self.assertNotRegex(pkgs, r"(?m)^plasma-desktop$")
+        self.assertNotRegex(pkgs, r"(?m)^kwin$")
+        self.assertNotRegex(pkgs, r"(?m)^sddm$")
+        session = ROOT / "archiso/airootfs/usr/bin/synapseos-session"
+        self.assertTrue(session.is_file())
+        self.assertTrue(stat.S_IXUSR & session.stat().st_mode)
+        text = session.read_text(encoding="utf-8")
+        self.assertIn("Hyprland", text)
+        self.assertIn("session.log", text)
+        self.assertNotIn("startplasma", text)
+        custom = (
+            ROOT / "archiso/airootfs/root/customize_airootfs.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn("synapseos-session", custom)
+        self.assertIn("SYNAPSEOS_SESSION_AUTOSTART", custom)
+        self.assertNotIn("synapseos-plasma", custom)
+        greetd = (
+            ROOT / "archiso/airootfs/etc/greetd/config.toml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("tuigreet", greetd)
+        self.assertIn("synapseos-session", greetd)
+        services = (
+            ROOT / "archiso/airootfs/etc/calamares/modules/services-systemd.conf"
+        ).read_text(encoding="utf-8")
+        self.assertIn("greetd.service", services)
+        self.assertNotIn("sddm.service", services)
+        installer = (
+            ROOT / "archiso/airootfs/etc/xdg/autostart/synapseos-installer.desktop"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("OnlyShowIn=KDE", installer)
+        self.assertIn("OnlyShowIn=Hyprland", installer)
 
-    def test_scale_bounce_and_firefox_ssd(self) -> None:
-        effect = ROOT / "archiso/airootfs/usr/share/synapseos/kwin/scale-main.js"
-        self.assertTrue(effect.is_file())
-        self.assertIn("OutBounce", effect.read_text(encoding="utf-8"))
+    def test_caelestia_binds_keep_super_s_for_the_assistant(self) -> None:
+        vars_lua = (
+            ROOT / "archiso/airootfs/etc/skel/.config/caelestia/hypr-vars.lua"
+        ).read_text(encoding="utf-8")
+        self.assertIn('terminal        = "kitty"', vars_lua)
+        self.assertIn('kbSpecialWs     = "SUPER + grave"', vars_lua)
+        user = (
+            ROOT / "archiso/airootfs/etc/skel/.config/caelestia/hypr-user.lua"
+        ).read_text(encoding="utf-8")
+        self.assertIn("SUPER + S", user)
+        self.assertIn("synapseos-overlay", user)
+        self.assertIn("SUPER + SPACE", user)
+        self.assertIn("synapseos menu", user)
+        self.assertIn("graphical-session.target", user)
+        hypr = ROOT / "archiso/airootfs/etc/skel/.config/hypr/hyprland.lua"
+        self.assertTrue(hypr.is_file())
+        pin = (
+            ROOT / "archiso/airootfs/etc/skel/.config/caelestia/dots-commit"
+        ).read_text(encoding="utf-8").strip()
+        self.assertEqual(len(pin), 40)
+
+    def test_firefox_ssd_and_kitty_profile(self) -> None:
         pref = ROOT / "archiso/airootfs/usr/lib/firefox/defaults/pref/synapseos.js"
         self.assertIn("browser.tabs.inTitlebar", pref.read_text(encoding="utf-8"))
-        kwinrc = (ROOT / "archiso/airootfs/etc/xdg/kwinrc").read_text(encoding="utf-8")
-        self.assertIn("scaleEnabled=true", kwinrc)
-        self.assertIn("synapseosjumpEnabled=false", kwinrc)
-        self.assertIn("magiclampEnabled=true", kwinrc)
-        self.assertIn("blurEnabled=true", kwinrc)
-        self.assertIn("better_blur_dxEnabled=true", kwinrc)
-        self.assertIn("synapseosfrostEnabled=true", kwinrc)
-
-    def test_jetbrains_fonts_and_konsole_profile(self) -> None:
-        kde = (ROOT / "archiso/airootfs/etc/skel/.config/kdeglobals").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("JetBrainsMono Nerd Font Propo", kde)
-        self.assertIn("JetBrainsMono Nerd Font Mono", kde)
-        self.assertNotIn("JetBrainsMono NFP,", kde)
-        profile = (
-            ROOT / "archiso/airootfs/etc/skel/.local/share/konsole/SynapseOS.profile"
-        ).read_text(encoding="utf-8")
-        self.assertIn("JetBrainsMono Nerd Font Mono", profile)
-        desk = (
-            ROOT / "archiso/airootfs/etc/skel/.local/share/applications/"
-            "org.kde.konsole.desktop"
-        ).read_text(encoding="utf-8")
-        self.assertIn("--profile SynapseOS.profile", desk)
-        self.assertIn("NoDisplay=true", desk)
         kitty_conf = (
             ROOT / "archiso/airootfs/etc/skel/.config/kitty/kitty.conf"
         ).read_text(encoding="utf-8")
         self.assertIn("background_opacity 0.78", kitty_conf)
         self.assertIn("background_blur 32", kitty_conf)
         self.assertIn("JetBrainsMono Nerd Font Mono", kitty_conf)
-        frost = (
-            ROOT / "archiso/airootfs/usr/share/kwin/effects/synapseosfrost/"
-            "contents/code/main.js"
-        )
-        self.assertTrue(frost.is_file())
-        frost_js = frost.read_text(encoding="utf-8")
-        self.assertIn("WindowForceBlurRole", frost_js)
-        self.assertIn("window.dock", frost_js)
-        frost_img = (
-            ROOT / "archiso/airootfs/usr/share/backgrounds/synapseos/"
-            "desktop-frost.jpg"
-        )
-        self.assertTrue(frost_img.is_file())
-        self.assertGreater(frost_img.stat().st_size, 10_000)
-        self.assertTrue(
-            (ROOT / "archiso/airootfs/usr/share/synapseos/frost-noise.png").is_file()
-        )
-        self.assertTrue((ROOT / "tools/gen-frost.py").is_file())
-        kde = ROOT / "archiso/airootfs/etc/skel/.config/kdeglobals"
-        self.assertIn("TerminalApplication=kitty", kde.read_text(encoding="utf-8"))
-        rules = (
-            ROOT / "archiso/airootfs/etc/skel/.config/kwinrulesrc"
-        ).read_text(encoding="utf-8")
-        # Browsers must be listed before the catch-all or they stay translucent.
-        self.assertIn(
-            "rules=a11e0001-5e0f-4b10-9c0d-000000000004,a11e0001-5e0f-4b10-9c0d-000000000002,a11e0001-5e0f-4b10-9c0d-000000000003,a11e0001-5e0f-4b10-9c0d-000000000001",
-            rules,
-        )
-        self.assertIn("org.synapseos.menu", rules)
-        chrome = ROOT / "archiso/airootfs/usr/bin/synapseos-apply-chrome"
-        self.assertTrue(chrome.is_file())
-        text = chrome.read_text(encoding="utf-8")
-        self.assertIn("isEffectLoaded better_blur_dx", text)
-        self.assertIn("blurEnabled true", text)
-        self.assertIn("loadEffect blur", text)
-        self.assertIn("loadEffect synapseosfrost", text)
-        # Better Blur DX reports loaded but composites nothing on virgl:
-        # a VM must always end up on stock blur + frost, never DX.
-        self.assertIn("systemd-detect-virt -q", text)
-        self.assertIn("unloadEffect better_blur_dx", text)
-        self.assertIn("desktop-frost.jpg", text)
-        self.assertIn("BlurStrength 7", text)
+
+    def test_vm_graphics_workarounds(self) -> None:
         gfx = (
             ROOT / "archiso/airootfs/etc/profile.d/synapseos-graphics.sh"
         ).read_text(encoding="utf-8")
-        # O is fatal when OpenGL cannot start. Prefer Vulkan-off instead.
-        self.assertNotIn('KWIN_COMPOSE="${KWIN_COMPOSE:-O}"', gfx)
-        self.assertIn('KWIN_COMPOSE="${KWIN_COMPOSE:-Q}"', gfx)
-        self.assertIn('KWIN_DISABLE_VULKAN="${KWIN_DISABLE_VULKAN:-1}"', gfx)
         self.assertIn('QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}"', gfx)
         self.assertIn("systemd-detect-virt", gfx)
+        self.assertIn("WLR_RENDERER", gfx)
+        self.assertNotIn("KWIN_COMPOSE", gfx)
         gen = (
             ROOT
             / "archiso/airootfs/usr/lib/systemd/user-environment-generators"
@@ -389,23 +376,11 @@ class DesktopConfigTests(unittest.TestCase):
         self.assertTrue(gen.is_file())
         self.assertTrue(stat.S_IXUSR & gen.stat().st_mode)
         self.assertIn("synapseos-graphics.sh", gen.read_text(encoding="utf-8"))
-        env = (
-            ROOT / "archiso/airootfs/etc/xdg/plasma-workspace/env/"
-            "synapseos-graphics.sh"
-        )
-        self.assertTrue(env.is_file())
-        fix = ROOT / "archiso/airootfs/usr/bin/synapseos-fix-blur"
-        self.assertTrue(fix.is_file())
-        self.assertTrue(stat.S_IXUSR & fix.stat().st_mode)
-        fix_text = fix.read_text(encoding="utf-8")
-        self.assertIn("kwin_wayland --replace", fix_text)
-        self.assertIn("systemd-detect-virt -q", fix_text)
-        self.assertIn("unloadEffect better_blur_dx", fix_text)
         pkgs = (ROOT / "archiso/packages.x86_64").read_text(encoding="utf-8")
         self.assertRegex(pkgs, r"(?m)^vulkan-swrast$")
         self.assertRegex(pkgs, r"(?m)^vulkan-virtio$")
         hotfix = ROOT / "tools/live-hotfix-desktop.sh"
-        self.assertIn("synapseosfrost", hotfix.read_text(encoding="utf-8"))
+        self.assertIn("synapseos-session", hotfix.read_text(encoding="utf-8"))
         runner = ROOT / "tools/run-iso.sh"
         self.assertTrue(runner.is_file())
         text = runner.read_text(encoding="utf-8")
@@ -414,29 +389,6 @@ class DesktopConfigTests(unittest.TestCase):
         self.assertIn("if=virtio", text)
         self.assertIn("sdl,gl=on", text)
         self.assertIn("do not use sudo", text)
-
-    def test_aether_plasma_hook_prefers_rendered_template(self) -> None:
-        hook = (
-            ROOT / "archiso/airootfs/etc/skel/.config/aether/custom/plasma/"
-            "post-apply.sh"
-        ).read_text(encoding="utf-8")
-        self.assertIn("omarchy/themes/aether", hook)
-        # Must not treat the installed scheme as the first source.
-        first_src = hook.split("for cand in")[1].split("do")[0]
-        self.assertIn("omarchy/themes/aether", first_src)
-        self.assertNotIn("color-schemes/Aether.colors", first_src)
-        pkgs = (ROOT / "archiso/packages.x86_64").read_text(encoding="utf-8")
-        self.assertRegex(pkgs, r"(?m)^aether$")
-        self.assertRegex(pkgs, r"(?m)^gtk-layer-shell$")
-        desk = (
-            ROOT / "archiso/airootfs/usr/share/synapseos/aether/aether.desktop"
-        ).read_text(encoding="utf-8")
-        self.assertIn("WEBKIT_DISABLE_COMPOSITING_MODE=1", desk)
-        custom = (
-            ROOT / "archiso/airootfs/root/customize_airootfs.sh"
-        ).read_text(encoding="utf-8")
-        self.assertIn("aether.desktop", custom)
-        self.assertIn("kwin-wayland/scripts/synapseostile", custom)
 
     def test_plymouth_is_wired(self) -> None:
         pkgs = (ROOT / "archiso/packages.x86_64").read_text(encoding="utf-8")
@@ -531,36 +483,16 @@ class DesktopConfigTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertNotIn("copytoram", installed)
 
-    def test_sddm_and_ksplash_are_synapseos(self) -> None:
-        sddm = (
-            ROOT / "archiso/airootfs/etc/sddm.conf.d/10-synapseos.conf"
-        ).read_text(encoding="utf-8")
-        self.assertIn("Current=breeze", sddm)
-        breeze_user = (
-            ROOT / "archiso/airootfs/usr/share/sddm/themes/breeze/theme.conf.user"
-        )
-        self.assertTrue(breeze_user.is_file())
-        breeze_conf = breeze_user.read_text(encoding="utf-8")
-        self.assertIn("/usr/share/backgrounds/synapseos/desktop.png", breeze_conf)
-        self.assertIn("showClock=true", breeze_conf)
+    def test_wallpaper_is_shipped(self) -> None:
         self.assertTrue(
             (
                 ROOT / "archiso/airootfs/usr/share/backgrounds/synapseos/desktop.png"
             ).is_file()
         )
-        defaults = (
-            ROOT
-            / "archiso/airootfs/usr/share/plasma/look-and-feel/"
-            "Catppuccin-Macchiato-Mauve/contents/defaults"
+        shell = (
+            ROOT / "archiso/airootfs/etc/skel/.config/caelestia/shell.json"
         ).read_text(encoding="utf-8")
-        self.assertIn("Theme=Catppuccin-Macchiato-Mauve", defaults)
-        self.assertNotIn("Catppuccin-Macchiato-Mauve-splash", defaults)
-        splash = (
-            ROOT
-            / "archiso/airootfs/usr/share/plasma/look-and-feel/"
-            "Catppuccin-Macchiato-Mauve/contents/splash/Splash.qml"
-        )
-        self.assertTrue(splash.is_file())
+        self.assertIn("/usr/share/backgrounds/synapseos", shell)
 
     def test_installed_system_gets_a_real_pacman_keyring(self) -> None:
         post = (
@@ -607,18 +539,7 @@ class DesktopConfigTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("Super + Space", keys)
         self.assertIn("Super + Return", keys)
-        shortcuts = (
-            ROOT / "archiso/airootfs/etc/xdg/kglobalshortcutsrc"
-        ).read_text(encoding="utf-8")
-        self.assertIn("Meta+Space", shortcuts)
-        self.assertIn("Meta+Return", shortcuts)
-        self.assertIn("Meta+Shift+F", shortcuts)
-        self.assertIn("Meta+K", shortcuts)
-        self.assertIn("synapseos-menu.desktop", shortcuts)
-        skel_keys = (
-            ROOT / "archiso/airootfs/etc/skel/.config/kglobalshortcutsrc"
-        ).read_text(encoding="utf-8")
-        self.assertEqual(shortcuts, skel_keys)
+        self.assertIn("Super + S", keys)
         menu_desk = (
             ROOT / "archiso/airootfs/usr/share/applications/synapseos-menu.desktop"
         ).read_text(encoding="utf-8")
@@ -653,50 +574,26 @@ class DesktopConfigTests(unittest.TestCase):
         self.assertIn("docker-dbs", install)
         self.assertIn("browser", install)
 
-    def test_hyprland_mode_toggle_is_wired(self) -> None:
-        script = (
-            ROOT / "archiso/airootfs/usr/share/kwin/scripts/synapseostile"
-            / "contents/code/main.js"
-        )
-        self.assertTrue(script.is_file())
-        js = script.read_text(encoding="utf-8")
-        self.assertIn("Meta+Shift+Space", js)
-        self.assertIn("saved[key]", js)
-        self.assertIn("restoreAll", js)
-        self.assertIn("dwindle", js)
-        self.assertIn('"Meta+" + key', js)
-        self.assertIn("desktopKeys", js)
-        meta = (
-            ROOT / "archiso/airootfs/usr/share/kwin/scripts/synapseostile"
-            / "metadata.json"
-        ).read_text(encoding="utf-8")
-        self.assertIn('"Id": "synapseostile"', meta)
-        for rel in (
-            "archiso/airootfs/etc/xdg/kwinrc",
-            "archiso/airootfs/etc/skel/.config/kwinrc",
-        ):
-            text = (ROOT / rel).read_text(encoding="utf-8")
-            self.assertIn("synapseostileEnabled=true", text, rel)
-            self.assertIn("Number=10", text, rel)
-        shortcuts = (
-            ROOT / "archiso/airootfs/etc/xdg/kglobalshortcutsrc"
-        ).read_text(encoding="utf-8")
-        self.assertIn("activate task manager entry 1=none,Meta+1", shortcuts)
-        self.assertIn("toggle tiling", (
-            ROOT / "archiso/airootfs/usr/bin/synapseos"
-        ).read_text(encoding="utf-8"))
+    def test_hyprland_is_the_session(self) -> None:
         toggle = (
             ROOT / "archiso/airootfs/usr/share/synapseos/bin/synapseos-toggle"
         ).read_text(encoding="utf-8")
-        self.assertIn("Toggle SynapseOS Hyprland mode", toggle)
+        self.assertIn("hyprctl dispatch togglefloating", toggle)
         menu = (
             ROOT / "archiso/airootfs/usr/share/synapseos/bin/synapseos-menu"
         ).read_text(encoding="utf-8")
-        self.assertIn("Hyprland tiling", menu)
+        self.assertIn("Float window", menu)
+        self.assertNotIn("Hyprland tiling", menu)
         keys = (
             ROOT / "archiso/airootfs/usr/share/synapseos/keybindings.txt"
         ).read_text(encoding="utf-8")
-        self.assertIn("Super + Shift + Space", keys)
+        self.assertIn("Super + Alt + Space", keys)
+        self.assertIn("Caelestia launcher", keys)
+        launch = (
+            ROOT / "archiso/airootfs/usr/share/synapseos/bin/synapseos-launch"
+        ).read_text(encoding="utf-8")
+        self.assertIn("thunar", launch)
+        self.assertNotIn("dolphin --new-window", launch)
 
     def test_calamares_branding_is_one_mark(self) -> None:
         desc = (

@@ -8,8 +8,8 @@ See [docs/GOAL.md](docs/GOAL.md) for the one-sentence goal, what this is
 not (not a Linux kernel, not [AIOS](https://github.com/agiresearch/AIOS)),
 and the v1 definition of done.
 
-The live and installed desktop is Plasma 6 with a compact Catppuccin
-Macchiato look.
+The live and installed desktop is [Caelestia](https://github.com/caelestia-dots/caelestia)
+(Hyprland + Quickshell) with the Synapse assistant on Super+S.
 
 ## Project layout
 
@@ -33,8 +33,8 @@ SynapseOs/
 ├── tools/build-aur.sh                # builds AUR packages into archiso/repo/
 ├── tools/check-packages.py           # pre-flight: resolves packages.x86_64
 ├── tools/live-hotfix-kernel.sh       # live-session workaround for pre-fix ISOs
-├── tools/install-catppuccin-plasma.sh # re-vendors Macchiato into airootfs
-├── tools/live-hotfix-desktop.sh      # live-session Plasma / SSH_AUTH_SOCK fix
+├── tools/vendor-caelestia.sh          # snapshots Caelestia dots into skel
+├── tools/live-hotfix-desktop.sh      # live-session Hyprland / SSH_AUTH_SOCK fix
 ├── build.sh                          # builds the ISO (needs root): ./build.sh
 └── out/                              # built ISO + checksum
 ```
@@ -46,7 +46,7 @@ live filesystem, in the installed system too.
 
 | Area        | Packages                                                                 |
 | ----------- | ------------------------------------------------------------------------ |
-| Desktop     | Plasma 6 (Catppuccin Macchiato), firefox, helium-browser, pipewire, obs-studio |
+| Desktop     | Caelestia (Hyprland + Quickshell), firefox, helium-browser, pipewire, obs-studio |
 | C / C++     | base-devel (gcc), clang, llvm, lld, gdb, lldb, valgrind, cmake, ninja, meson |
 | Java        | jdk-openjdk, maven, gradle                                               |
 | Go          | go, gopls                                                                |
@@ -63,34 +63,38 @@ live filesystem, in the installed system too.
 | CLI         | ripgrep, fd, fzf, jq, yq, bat, eza, just, tokei, hyperfine, httpie, shellcheck, 7zip, btop, starship, zoxide, gum, mise, lazydocker, dua-cli, plocate, yt-dlp, wl-clipboard |
 | Media / share | mpv (LocalSend is Super+Space → Install → Service) |
 
-### Super+ shortcuts (Omarchy-style)
+### Super+ shortcuts (Caelestia + Synapse)
 
-Plasma keeps its own window management. Everyday launch and install keys match Omarchy:
+Hyprland tiling is the default. Super tap opens the Caelestia launcher; Super+S stays the assistant.
 
 | Shortcut | Action |
 | -------- | ------ |
-| Super+Shift+Space | Hyprland tiling on/off (off restores window positions) |
-| Super+T | Float / retile the active window (while tiling) |
-| Super+W | Close window |
-| Super+F | Fullscreen |
-| Super+Arrows | Focus window in that direction |
-| Super+Shift+Arrows | Swap window in that direction |
-| Super+1 … 9 / 0 | Switch desktop |
-| Super+Shift+1 … 0 | Move window to that desktop |
-| Super+Tab | Next desktop |
+| Super (tap) | Caelestia launcher |
 | Super+Space | System menu (apps, one-click install, power) |
-| Super+Alt+Space | KRunner |
-| Super+Return | Terminal |
-| Super+Shift+Return / Super+Shift+B | Browser |
-| Super+Shift+F | Files |
-| Super+Shift+N | Editor |
-| Super+K | Shortcut cheat sheet |
+| Super+S | Synapse assistant |
+| Super+grave | Special workspace |
+| Super+T / Super+Return | Terminal (Kitty) |
+| Super+W | Browser |
+| Super+E | Files (Thunar) |
+| Super+C | Editor |
+| Super+Q | Close window |
+| Super+F | Fullscreen |
+| Super+Alt+Space | Float / tile the active window |
+| Super+Arrows | Focus window in that direction |
+| Super+Shift+Arrows | Move window in that direction |
+| Super+1 … 9 / 0 | Switch workspace |
+| Super+Alt+1 … 0 | Move window to that workspace |
+| Super+L | Lock |
+| Super+K | Caelestia panels |
+| Super+Shift+K | Shortcut cheat sheet |
 | Super+Escape | Lock / logout / reboot / shutdown |
-| Super+Ctrl+L | Lock |
 | Super+Ctrl+T | btop |
 | Super+Shift+D | lazydocker |
-| Super+S | Synapse assistant |
+| Super+Shift+B / Super+Shift+Return | Browser |
+| Super+Shift+F | Files |
+| Super+Shift+N | Editor |
 | Print | Screenshot |
+| Ctrl+Alt+S | Pause Synapse |
 
 ```
 synapseos                  # same menu from a terminal
@@ -101,10 +105,10 @@ synapseos install editor zed
 synapseos install dev-env node
 synapseos install docker-dbs
 synapseos pkg add <pkgs>
-synapseos toggle tiling        # same as Super+Shift+Space
+synapseos toggle floating      # same as Super+Alt+Space
 ```
 
-Tiling is a switch, not the default. Two windows stay where you put them until you turn Hyprland mode on; they go back to those positions when you turn it off.
+Tiling is the default. Super+Alt+Space floats the active window.
 
 One-click extras (browsers, editors, language toolchains, Docker databases, Spotify / Signal / Tailscale / Steam) are **not** on the ISO. Super+Space → Install, or `synapseos install …`, pulls them when you ask.
 
@@ -126,7 +130,7 @@ synapseos-mcp          # stdio MCP for claude / codex / opencode
 
 The core is unprivileged. Launch / focus / open-URL run immediately in the
 default **assist** mode. Kill, throttle, close and `shell_run` ask first.
-PID 1, KWin, plasmashell and the core itself cannot be killed. Ctrl+Alt+S
+PID 1, Hyprland, Quickshell and the core itself cannot be killed. Ctrl+Alt+S
 is the kill switch.
 
 The planner and the mic use SpaceXAI (`XAI_API_KEY` or `synapsectl key set`).
@@ -157,20 +161,21 @@ Notes:
 
 ### AUR packages
 
-`claude-code`, `openai-codex-bin`, `opencode-bin`, `helium-browser-bin` and
-`paru-bin` are not in the official repositories, so they are built on the build
-host and staged into `archiso/repo/`, which `pacman.conf` exposes to mkarchiso
-as `[synapseos-local]` (`SigLevel = Optional TrustAll`):
+`claude-code`, `openai-codex-bin`, `opencode-bin`, `helium-browser-bin`,
+`paru-bin`, `caelestia-cli`, `caelestia-shell`, `quickshell-git` and the other
+Caelestia AUR deps are not in the official repositories, so they are built on
+the build host and staged into `archiso/repo/`, which `pacman.conf` exposes to
+mkarchiso as `[synapseos-local]` (`SigLevel = Optional TrustAll`):
 
 ```bash
 ./tools/build-aur.sh                  # all of them, as a normal user
 ./tools/build-aur.sh opencode-bin     # just one, e.g. to pick up a new version
 ```
 
-All five are binary repacks, so nothing is compiled and no build dependencies
-are installed on the host; `makepkg -d` skips the dependency checks and the
-runtime dependencies are resolved from the official repositories inside the
-ISO. `*-debug` packages are filtered out. Note that Claude Code ships under a
+Most of those are binary repacks. `quickshell-git` and `caelestia-shell` are
+compiled. `makepkg -d` skips the dependency checks (and the caelestia-cli /
+caelestia-shell circular optional depends) and the runtime dependencies are
+resolved from the official repositories inside the ISO. `*-debug` packages are filtered out. Note that Claude Code ships under a
 proprietary license, so redistributing an ISO containing it publicly is
 probably not permitted — check the terms before publishing images.
 
@@ -194,8 +199,8 @@ git clone https://github.com/srineshr1/synapseos.git && cd synapseos
 ./tools/build-aur.sh calamares    # the installer itself (compiles)
 python3 tools/check-packages.py   # pre-flight the package list
 ./build.sh                        # needs root
-# Catppuccin Macchiato is already in airootfs. Re-fetch with:
-#   ./tools/install-catppuccin-plasma.sh
+# Caelestia dots are already in airootfs/etc/skel. Re-fetch with:
+#   ./tools/vendor-caelestia.sh
 ```
 
 `build.sh` rewrites the `[synapseos-local]` server path in
@@ -404,9 +409,9 @@ and log out again.
 | Apps in the ISO / live etc     | `archiso/packages.x86_64` (e.g. add `code`, `steam`, ...)                  |
 | ISO name / label / version     | `archiso/profiledef.sh`                                                    |
 | System files in live + target  | files under `archiso/airootfs/etc/...` (they land in /etc of every image)  |
-| Defaults for new desktop users | `archiso/airootfs/etc/skel/` (Plasma + Catppuccin Macchiato)                |
-| Wallpapers                     | `/usr/share/backgrounds/synapseos/desktop.png` + Plasma appletsrc           |
-| Catppuccin theme files         | `tools/install-catppuccin-plasma.sh`                                        |
+| Defaults for new desktop users | `archiso/airootfs/etc/skel/` (Caelestia + SynapseOS hypr-vars.lua)          |
+| Wallpapers                     | `/usr/share/backgrounds/synapseos/desktop.png`                              |
+| Caelestia dots                 | `tools/vendor-caelestia.sh`                                                |
 | Build-time rootfs steps        | `archiso/airootfs/root/customize_airootfs.sh`                              |
 | Pre-initramfs install step     | `archiso/airootfs/usr/share/synapseos/prepare.sh`                          |
 | Installed-system cleanup       | `archiso/airootfs/usr/share/synapseos/postinstall.sh`                      |
@@ -419,17 +424,15 @@ and log out again.
 | systemd-boot (UEFI)            | `archiso/efiboot/`                                                         |
 | BIOS boot menu                 | `archiso/syslinux/` (640x480 8-bit splash.png from `tools/gen-branding.py`) |
 
-Plasma defaults live in `/etc/xdg/` (system) and `/etc/skel/.config/`
-(new users): `kwinrc`, `kwinrulesrc`, `kdeglobals`, the look-and-feel
-package, and the Konsole / Kitty profiles. To change dock, panel, theme
-or window rules, configure a session, copy the resulting files into
-`airootfs/etc/skel/.config/`, and rebuild.
+Caelestia defaults live in `/etc/skel/.config/hypr/` (upstream snapshot) and
+`/etc/skel/.config/caelestia/` (SynapseOS overrides: `hypr-vars.lua`,
+`hypr-user.lua`, `shell.json`). Never edit the vendored `hypr/` tree; put
+personal binds in `hypr-user.lua`. Re-vendor with `./tools/vendor-caelestia.sh`.
 
 Live-shell credentials: user `live` / password `live` (passwordless sudo).
 
-Plasma Welcome is skipped on the live user and on `rescue`. The account
-Calamares creates still inherits `/etc/skel` and can run Welcome on first
-login after install.
+The account Calamares creates inherits `/etc/skel`. The installed system
+stops at tuigreet instead of autologging in.
 
 ## Recovery account on the installed system
 
@@ -460,17 +463,17 @@ The default live entry is a quiet splash. Advanced → **Verbose** shows
 kernel and systemd messages. The installed system still boots quietly
 (`airootfs/etc/default/grub` and `modules/grubcfg.conf`).
 
-Plasma is autostarted on tty1 by `/home/live/.zprofile`, which calls
-`synapseos-plasma`. That wrapper runs `startplasma-wayland`, tees the
-session output to `~/.cache/synapseos/plasma-session.log` and returns to the
-shell when the compositor exits non-zero — an exec'd session that dies takes the
-login shell with it, agetty restarts, and all that is left on screen is the motd.
+Hyprland is autostarted on tty1 by `/home/live/.zprofile`, which calls
+`synapseos-session`. That wrapper runs `Hyprland`, tees the session output to
+`~/.cache/synapseos/session.log` and returns to the shell when the compositor
+exits non-zero — an exec'd session that dies takes the login shell with it,
+agetty restarts, and all that is left on screen is the motd.
 
 If the desktop does not appear:
 
 ```bash
-synapseos-plasma      # retry, with the failure printed and logged
-synapseos-logs        # one file with journal, plasma log, GPU info, mounts
+synapseos-session     # retry, with the failure printed and logged
+synapseos-logs        # one file with journal, session log, GPU info, mounts
 journalctl -b -p err --no-pager
 ```
 
@@ -479,45 +482,23 @@ to `DIR`, so pass a mounted USB stick to get it off the machine. The live
 journal is `Storage=volatile`, i.e. RAM only — collect it before rebooting.
 
 Booting with `nodesktop` on the kernel command line (the "console only" menu
-entry) skips the Plasma autostart and leaves a plain shell for debugging.
+entry) skips the Hyprland autostart and leaves a plain shell for debugging.
 
 ### The desktop fails to start in a VM
 
-On the 2026.08.15 ISO this is KWin + virgl, not a missing package. Forcing
-`KWIN_COMPOSE=O` makes KWin exit if OpenGL cannot start, and even when the
-compositor comes back, plasmashell dies on
-`error 7: importing the supplied dmabufs failed` (three times →
-start-limit → empty session). **Safe graphics is not enough** — QPainter
-still advertises linux-dmabuf.
+Quickshell hits the same virgl dmabuf import failure plasmashell did
+(`error 7: importing the supplied dmabufs failed`). VMs force software Qt
+Quick automatically (`systemd-detect-virt`). **Safe graphics** (`safegfx` or
+`synapseos-safe-graphics on`) additionally sets `WLR_RENDERER=pixman`.
 
-On that ISO, switch to tty2 (`Ctrl+Alt+F2`), log in as `live` / `live`, and
+On an older ISO, switch to tty2 (`Ctrl+Alt+F2`), log in as `live` / `live`, and
 either copy this checkout in and run `sudo ./tools/live-hotfix-desktop.sh`,
 or:
 
 ```bash
-export QT_QUICK_BACKEND=software QSG_RHI_BACKEND=software
-unset KWIN_COMPOSE
-export KWIN_DISABLE_VULKAN=1
-synapseos-plasma
+export QT_QUICK_BACKEND=software QSG_RHI_BACKEND=software AQ_NO_MODIFIERS=1
+synapseos-session
 ```
-
-Newer images set those automatically in a VM (`systemd-detect-virt`) and
-disable Vulkan instead of requiring OpenGL. Rebuild to pick that up.
-
-Frost in a VM is a pre-rendered cache of the wallpaper
-(`desktop-frost.jpg`, regenerated with `python3 tools/gen-frost.py`)
-plus cheap stock KWin blur when OpenGL actually starts. If live blur
-does not load, translucent windows show the baked frost image instead
-of a raw see-through. Panels and menus are force-blurred; browsers stay
-opaque.
-
-Blur (windows, menus, Kickoff) needs OpenGL. Better Blur DX
-(`kwin-effects-better-blur-dx` in `archiso/repo/`) is preferred on bare
-metal; a VM always uses stock KWin blur plus the SynapseOS frost effect.
-Rebuild the DX package after a kwin upgrade
-(`./tools/build-aur.sh kwin-effects-better-blur-dx`).
-Software composition (`KWIN_COMPOSE=Q`) cannot blur — it is opt-in via the
-**safe graphics** boot entry (`safegfx`) or:
 
 ```bash
 sudo synapseos-safe-graphics on      # or: off, auto, status
@@ -527,8 +508,7 @@ Then log out and back in. `cosmicsafe` on the kernel command line is still
 accepted as an alias for `safegfx` (leftover from the COSMIC-era ISOs).
 
 VirtualBox: graphics controller **VMSVGA**, **3D acceleration on**, 128 MB
-of VRAM. Without 3D, KWin falls back to software GL (slow blur) or fails
-and you boot **safe graphics** instead.
+of VRAM. Without 3D, boot **safe graphics**.
 
 QEMU (do not use plain `virtio-vga` — that is 2D and blur will not run):
 
@@ -554,7 +534,7 @@ To find the actual crash, `postinstall.sh` now also deletes the live
 `Storage=volatile` journald drop-in and creates `/var/log/journal`, so the
 installed system keeps its logs across reboots — without that, the evidence for
 a crash that forces a reboot is gone. `systemd-coredump` is enabled by default,
-so the backtrace is in `coredumpctl info kwin_wayland`; `synapseos-logs` collects
+so the backtrace is in `coredumpctl info Hyprland`; `synapseos-logs` collects
 that, the previous boot and the workaround variables into its bundle.
 
 

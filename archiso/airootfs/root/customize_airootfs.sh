@@ -9,27 +9,26 @@ echo "live:live" | chpasswd
 printf '%%wheel ALL=(ALL:ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/10-live
 chmod 440 /etc/sudoers.d/10-live
 
-# Auto-start Plasma on the live user's first login from tty1.
-# synapseos-plasma wraps startplasma-wayland, logs to
-# ~/.cache/synapseos/plasma-session.log and returns to the shell on
-# failure instead of exec'ing, so a compositor that dies leaves a
-# diagnosable console rather than a getty restart loop.
+# Auto-start Hyprland on the live user's first login from tty1.
+# synapseos-session wraps Hyprland, logs to ~/.cache/synapseos/session.log
+# and returns to the shell on failure instead of exec'ing, so a compositor
+# that dies leaves a diagnosable console rather than a getty restart loop.
 cat > /home/live/.zprofile << 'EOF'
 if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DISPLAY:-}" ] && [ "$(tty)" = "/dev/tty1" ] &&
-   [ -z "${SYNAPSEOS_PLASMA_AUTOSTART:-}" ]; then
+   [ -z "${SYNAPSEOS_SESSION_AUTOSTART:-}" ]; then
     if grep -qw nodesktop /proc/cmdline; then
-        printf '\nnodesktop on the kernel command line: Plasma was not started.\n'
-        printf 'Start it with:  synapseos-plasma     Collect diagnostics:  synapseos-logs\n\n'
+        printf '\nnodesktop on the kernel command line: the desktop was not started.\n'
+        printf 'Start it with:  synapseos-session     Collect diagnostics:  synapseos-logs\n\n'
     else
-        export SYNAPSEOS_PLASMA_AUTOSTART=1
-        synapseos-plasma
+        export SYNAPSEOS_SESSION_AUTOSTART=1
+        synapseos-session
     fi
 fi
 EOF
 chown live:live /home/live/.zprofile
 
-# Also drop the installer into the live user's autostart. Plasma starts
-# xdg-desktop-autostart.target, which picks up both this and
+# Also drop the installer into the live user's autostart. Hyprland starts
+# graphical-session.target (hypr-user.lua), which picks up this and
 # /etc/xdg/autostart/; synapseos-installer --autostart takes a lock so
 # only one Calamares window appears.
 install -d -m 0755 -o live -g live /home/live/.config/autostart
@@ -40,6 +39,7 @@ install -o live -g live -m 0644 \
 # Network: NetworkManager instead of systemd-networkd on the live media
 systemctl mask systemd-networkd.service
 systemctl enable NetworkManager.service
+systemctl enable bluetooth.service
 
 # Generic live helpers kept from upstream
 systemctl enable pacman-init.service choose-mirror.service
@@ -75,24 +75,6 @@ unset -f _add_gnome_keyring_pam
 # the session environment (see /usr/bin/synapseos-installer).
 rm -f /usr/share/applications/calamares.desktop
 
-# Look is owned by Aether. Hide Plasma's Appearance category and theme KCMs
-# so they never show in System Settings or KRunner.
-for _cat in \
-    /usr/share/systemsettings/categories/settings-appearance.desktop \
-    /usr/share/systemsettings/categories/settings-appearance-font.desktop \
-    /usr/share/systemsettings/categories/settings-appearance-themes.desktop
-do
-    [[ -f "$_cat" ]] || continue
-    grep -q '^Hidden=true' "$_cat" 2>/dev/null || printf '\nHidden=true\nNoDisplay=true\n' >> "$_cat"
-done
-for _kcm in colors desktoptheme style icons cursortheme fonts fontinst \
-            kwindecoration lookandfeel splashscreen wallpaper animations \
-            soundtheme breezedecoration qtquicksettings; do
-    _desk="/usr/share/applications/kcm_${_kcm}.desktop"
-    [[ -f "$_desk" ]] || continue
-    grep -q '^Hidden=true' "$_desk" 2>/dev/null || printf '\nHidden=true\nNoDisplay=true\n' >> "$_desk"
-done
-
 # Kickoff + wired-network icons: a 3x3 grid and a globe, not the KDE K
 # or Papirus computer/ethernet glyph.
 _icon_src=/usr/share/synapseos/icons
@@ -122,56 +104,6 @@ if [[ -d "$_icon_src" ]]; then
     gtk-update-icon-cache -q /usr/share/icons/Papirus-Dark 2>/dev/null || true
 fi
 unset _icon_src _theme _dir _name
-
-# Kitty is the default terminal. Hide Konsole from menus so Ctrl+Alt+T
-# and "Open Terminal" cannot bring the chrome bar back.
-if [[ -f /usr/share/applications/org.kde.konsole.desktop ]]; then
-    sed -i \
-        -e 's|^Exec=konsole$|Exec=konsole --hide-menubar --hide-toolbars --hide-tabbar --profile SynapseOS.profile|' \
-        -e 's|^Exec=konsole --new-tab$|Exec=konsole --new-tab --profile SynapseOS.profile|' \
-        -e '/^X-KDE-Shortcuts=/d' \
-        /usr/share/applications/org.kde.konsole.desktop
-    grep -q '^NoDisplay=true' /usr/share/applications/org.kde.konsole.desktop \
-        || printf '\nNoDisplay=true\n' >> /usr/share/applications/org.kde.konsole.desktop
-fi
-if [[ -f /usr/share/applications/kitty.desktop ]]; then
-    if grep -q '^X-KDE-Shortcuts=' /usr/share/applications/kitty.desktop; then
-        sed -i 's|^X-KDE-Shortcuts=.*|X-KDE-Shortcuts=Ctrl+Alt+T;Meta+Return|' \
-            /usr/share/applications/kitty.desktop
-    else
-        printf '\nX-KDE-Shortcuts=Ctrl+Alt+T;Meta+Return\n' \
-            >> /usr/share/applications/kitty.desktop
-    fi
-fi
-
-# Aether's desktop file is owned by the aether package. Overlaying it in
-# the profile makes pacstrap fail with "exists in filesystem".
-if [[ -f /usr/share/synapseos/aether/aether.desktop ]]; then
-    install -m 0644 /usr/share/synapseos/aether/aether.desktop \
-        /usr/share/applications/aether.desktop
-fi
-
-# Bounce overlay for the stock scale effect. Cannot live under
-# /usr/share/kwin-wayland in the profile: kwin owns that path and
-# pacstrap refuses to overwrite it.
-if [[ -f /usr/share/synapseos/kwin/scale-main.js ]]; then
-    install -d /usr/share/kwin-wayland/effects/scale/contents/code
-    install -m 0644 /usr/share/synapseos/kwin/scale-main.js \
-        /usr/share/kwin-wayland/effects/scale/contents/code/main.js
-fi
-if [[ -d /usr/share/kwin/scripts/synapseostile ]]; then
-    install -d /usr/share/kwin-wayland/scripts
-    rm -rf /usr/share/kwin-wayland/scripts/synapseostile
-    cp -a /usr/share/kwin/scripts/synapseostile \
-        /usr/share/kwin-wayland/scripts/synapseostile
-fi
-if [[ -f /usr/share/synapseos/kwin/frost-main.js ]]; then
-    install -d /usr/share/kwin-wayland/effects/synapseosfrost/contents/code
-    install -m 0644 /usr/share/synapseos/kwin/frost-main.js \
-        /usr/share/kwin-wayland/effects/synapseosfrost/contents/code/main.js
-    install -m 0644 /usr/share/kwin/effects/synapseosfrost/metadata.json \
-        /usr/share/kwin-wayland/effects/synapseosfrost/metadata.json
-fi
 
 # Qt will not see JetBrains if the live image has no fontconfig cache.
 if command -v fc-cache >/dev/null; then

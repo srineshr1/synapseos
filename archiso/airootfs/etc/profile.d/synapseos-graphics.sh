@@ -1,17 +1,13 @@
-# SynapseOS: KWin compositor backend + Qt Quick renderer.
+# SynapseOS: Hyprland + Quickshell renderer workarounds.
 #
-# Do not set KWIN_COMPOSE=O. If OpenGL cannot start, KWin logs
-#   Could not fulfill the requested compositing mode in KWIN_COMPOSE: 1
-# and exits — the session never comes up. Prefer OpenGL by disabling
-# Vulkan instead; KWin can still fall back to QPainter.
-#   auto  (default)  KWIN_DISABLE_VULKAN=1
-#   safe             KWIN_COMPOSE=Q (`safegfx` on the kernel cmdline, or
+#   auto  (default)  no compositor override; VMs still get software Qt Quick
+#   safe             WLR_RENDERER=pixman (`safegfx` on the kernel cmdline, or
 #                    /etc/synapseos/safe-graphics)
 #   off              /etc/synapseos/no-safe-graphics exists: never apply
 #
-# virgl advertises linux-dmabuf then fails to import. plasmashell dies
-# with "error 7: importing the supplied dmabufs failed" and systemd hits
-# start-limit. In a VM, force software Qt Quick so the shell survives.
+# virgl advertises linux-dmabuf then fails to import. Quickshell dies with
+# the same "importing the supplied dmabufs failed" path plasmashell used
+# to. In a VM, force software Qt Quick so the Caelestia shell survives.
 #
 # `cosmicsafe` is still accepted as an alias for safegfx so older boot
 # entries keep working.
@@ -27,17 +23,15 @@ if [ ! -e /etc/synapseos/no-safe-graphics ]; then
 
     case "${_synapseos_gfx}" in
         safe)
-            export KWIN_COMPOSE="${KWIN_COMPOSE:-Q}"
-            ;;
-        auto)
-            export KWIN_DISABLE_VULKAN="${KWIN_DISABLE_VULKAN:-1}"
+            export WLR_RENDERER="${WLR_RENDERER:-pixman}"
+            export AQ_NO_MODIFIERS="${AQ_NO_MODIFIERS:-1}"
             ;;
     esac
 
     if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt -q; then
         export QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}"
         export QSG_RHI_BACKEND="${QSG_RHI_BACKEND:-software}"
-        export KWIN_DRM_USE_MODIFIERS="${KWIN_DRM_USE_MODIFIERS:-0}"
+        export AQ_NO_MODIFIERS="${AQ_NO_MODIFIERS:-1}"
     fi
 
     unset _synapseos_gfx

@@ -120,8 +120,8 @@ synapseos_done() {
 synapseos_terminal() {
     if synapseos_have kitty; then
         command -p kitty "$@"
-    elif synapseos_have konsole; then
-        konsole -e "$@"
+    elif synapseos_have foot; then
+        command -p foot "$@"
     else
         xdg-terminal-exec "$@"
     fi
@@ -178,7 +178,9 @@ synapseos_default_editor() {
         synapseos_float "Helix" helix
     elif synapseos_have nvim; then
         synapseos_float "Neovim" nvim
+    elif synapseos_have micro; then
+        synapseos_float "micro" micro
     else
-        kate >/dev/null 2>&1 &
+        synapseos_float "Neovim" nvim
     fi
 }

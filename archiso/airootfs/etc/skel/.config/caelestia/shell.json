@@ -1,0 +1,12 @@
+{
+    "general": {
+        "apps": {
+            "terminal": ["kitty"],
+            "audio": ["pavucontrol"],
+            "explorer": ["thunar"]
+        }
+    },
+    "paths": {
+        "wallpaperDir": "/usr/share/backgrounds/synapseos"
+    }
+}

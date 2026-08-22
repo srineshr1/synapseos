@@ -7,4 +7,4 @@ Icon=preferences-desktop-keyboard
 Terminal=false
 Categories=System;
 NoDisplay=true
-X-KDE-Shortcuts=Meta+K
+X-KDE-Shortcuts=Meta+Shift+K

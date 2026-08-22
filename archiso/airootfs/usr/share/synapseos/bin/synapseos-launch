@@ -13,7 +13,7 @@ Usage: synapseos launch <target>
 
   terminal          Kitty (or the configured terminal)
   browser           Default browser
-  files [cwd]       Dolphin
+  files [cwd]       Thunar
   editor            VS Code / Helix / Neovim / Kate
   tui <cmd...>      Command in a floating terminal
   webapp <url>      Site as an app window
@@ -31,11 +31,11 @@ case "$cmd" in
     browser)
         synapseos_default_browser
         ;;
-    files|file-manager|dolphin)
+    files|file-manager|dolphin|thunar)
         if [[ -n ${1:-} ]]; then
-            dolphin --new-window "$1" >/dev/null 2>&1 &
+            thunar "$1" >/dev/null 2>&1 &
         else
-            dolphin >/dev/null 2>&1 &
+            thunar >/dev/null 2>&1 &
         fi
         ;;
     editor)

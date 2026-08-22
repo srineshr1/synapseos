@@ -8,6 +8,6 @@ Icon=/usr/share/pixmaps/synapseos-installer.png
 Terminal=false
 NoDisplay=true
 StartupNotify=true
-OnlyShowIn=KDE;
+OnlyShowIn=Hyprland;
 X-GNOME-Autostart-enabled=true
 X-GNOME-Autostart-Delay=2

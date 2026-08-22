@@ -918,7 +918,7 @@ def main() -> None:
     slide(
         SLIDES / "slide1.png",
         "A fresh start",
-        "A compact Catppuccin Plasma desktop, ready the moment the installer finishes.",
+        "A compact Caelestia desktop, ready the moment the installer finishes.",
     )
     slide(
         SLIDES / "slide2.png",
@@ -942,8 +942,10 @@ def main() -> None:
     syslinux_splash(SYSLINUX / "splash.png")
 
     write_plymouth_assets(PLYMOUTH)
-    write_sddm_assets(SDDM)
-    write_ksplash_mark(KSPLASH)
+    if SDDM.exists():
+        write_sddm_assets(SDDM)
+    if KSPLASH.exists():
+        write_ksplash_mark(KSPLASH)
 
     for leftover in (BRANDING / "welcome.png", BRANDING / "banner.png"):
         if leftover.exists():

@@ -131,66 +131,86 @@ xfsprogs
 xl2tpd
 zsh
 
-# ---- SynapseOS Plasma desktop (Catppuccin Macchiato) ----
-plasma-desktop
-plasma-workspace
-plasma-nm
-plasma-pa
-plasma-systemmonitor
-kdeplasma-addons
-kscreen
-powerdevil
-bluedevil
-kwin
-kwin-effects-better-blur-dx
+# ---- SynapseOS Caelestia desktop (Hyprland + Quickshell) ----
+hyprland
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+uwsm
 mesa
 vulkan-virtio
 vulkan-swrast
 vulkan-headers
-sddm
-sddm-kcm
+greetd
+greetd-tuigreet
 plymouth
-dolphin
-konsole
 kitty
-kate
-gwenview
-spectacle
-ark
-okular
-kinfocenter
-kde-gtk-config
-breeze
-breeze-gtk
-breeze-icons
-papirus-icon-theme
-kvantum
-qt6-svg
-qt6-declarative
-qt5-quickcontrols2
-xdg-desktop-portal-kde
-kwalletmanager
-kwallet-pam
-ksshaskpass
-phonon-qt6-vlc
-plasma-browser-integration
+foot
+thunar
+gvfs
+tumbler
+ffmpegthumbnailer
+micro
 firefox
+pavucontrol
+polkit-gnome
 # Secrets / SSH agent used by /etc/profile.d/synapseos-ssh-agent.sh
 gcr-4
 gnome-keyring
 networkmanager
+bluez
+bluez-utils
+papirus-icon-theme
+adw-gtk-theme
+qt6-svg
+qt6-declarative
+qt6-imageformats
+qt6ct
+gtk3
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+grim
+slurp
+swappy
+cliphist
+fuzzel
+brightnessctl
+ddcutil
+hyprpicker
+libnotify
+ydotool
+xdg-user-dirs
+trash-cli
+aubio
+lm_sensors
+libqalculate
+power-profiles-daemon
+geoclue
+gammastep
+gpu-screen-recorder
+playerctl
+direnv
+fish
+dart-sass
+frameworkintegration
 noto-fonts
+noto-fonts-cjk
 noto-fonts-emoji
 inter-font
 ttf-jetbrains-mono-nerd
-# Wallpaper-driven theme. Aether writes GTK + our Plasma color scheme hook.
-aether
-webkit2gtk-4.1
-gtk3
-gtk-layer-shell
-pipewire
-pipewire-pulse
-wireplumber
+ttf-cascadia-code-nerd
+ttf-material-symbols-variable
+# AUR, staged by tools/build-aur.sh into [synapseos-local]
+caelestia-cli
+caelestia-shell
+quickshell-git
+libcava
+ttf-rubik-vf
+papirus-folders
+darkly-bin
+pwvucontrol
+qtengine
 
 # ---- Installer ----
 calamares
@@ -203,9 +223,7 @@ kcrash
 qt6-wayland
 # Lets grub-mkconfig add entries for other operating systems on the disk.
 os-prober
-# NOTE: the plasmalnf module additionally needs kconfig + kpackage, and
-# displaymanager needs python-toml. Neither is used by settings.conf, so those
-# packages are deliberately not shipped.
+# displaymanager is unused (greetd is enabled via services-systemd).
 
 # ---- Toolchains ----
 base-devel
@@ -309,7 +327,7 @@ helium-browser-bin
 obs-studio
 
 # Overlay UI for Super+S (synapseos-overlay). Qt 6 itself is already pulled
-# in by Plasma; this is the Python bindings.
+# in by Caelestia-shell; this is the Python bindings.
 pyside6
 
 # ---- AI coding agents (staged from the AUR, see tools/build-aur.sh) ----

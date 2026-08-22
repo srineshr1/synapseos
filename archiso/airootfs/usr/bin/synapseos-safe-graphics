@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Persist KWin safe-graphics mode.
+# Persist Hyprland safe-graphics mode.
 #
-#   synapseos-safe-graphics on      # KWIN_COMPOSE=Q everywhere (no blur)
-#   synapseos-safe-graphics off     # never apply Q
-#   synapseos-safe-graphics auto    # default: OpenGL (blur works)
+#   synapseos-safe-graphics on      # WLR_RENDERER=pixman (no GPU blur)
+#   synapseos-safe-graphics off     # never apply pixman
+#   synapseos-safe-graphics auto    # default: GPU; VMs still get software Qt
 #   synapseos-safe-graphics status
 set -uo pipefail
 
@@ -27,15 +27,16 @@ show_status() {
     if [[ -e "$OFF" ]]; then
         echo "mode: off  (workarounds disabled everywhere)"
     elif [[ -e "$ON" ]]; then
-        echo "mode: on   (KWIN_COMPOSE=Q always)"
+        echo "mode: on   (WLR_RENDERER=pixman always)"
     else
-        echo "mode: auto (OpenGL; boot safegfx or run 'on' if the desktop fails)"
+        echo "mode: auto (GPU; boot safegfx or run 'on' if the desktop fails)"
     fi
     if command -v systemd-detect-virt > /dev/null; then
         echo "virtualisation: $(systemd-detect-virt)"
     fi
     echo "in this shell:"
-    printf '  KWIN_COMPOSE=%s\n' "${KWIN_COMPOSE:-unset}"
+    printf '  WLR_RENDERER=%s\n' "${WLR_RENDERER:-unset}"
+    printf '  QT_QUICK_BACKEND=%s\n' "${QT_QUICK_BACKEND:-unset}"
 }
 
 case "${1:-status}" in

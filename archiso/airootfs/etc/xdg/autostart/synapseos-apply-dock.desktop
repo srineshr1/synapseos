@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=SynapseOS dock
-Comment=Apply the floating Macchiato panel once
-Exec=/usr/bin/synapseos-apply-dock
-OnlyShowIn=KDE;
-X-KDE-autostart-phase=2
-StartupNotify=false
-NoDisplay=true

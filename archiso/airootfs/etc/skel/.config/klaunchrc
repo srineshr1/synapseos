@@ -1,7 +1,0 @@
-[BusyCursorSettings]
-Bouncing=true
-Timeout=5
-
-[FeedbackStyle]
-BusyCursor=true
-TaskbarButton=true

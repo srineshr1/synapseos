@@ -1,9 +1,0 @@
-[General]
-ColorScheme=CatppuccinMacchiatoMauve
-
-[KDE]
-LookAndFeelPackage=Catppuccin-Macchiato-Mauve
-widgetStyle=Breeze
-
-[Icons]
-Theme=Papirus-Dark

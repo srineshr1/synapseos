@@ -1,32 +1,34 @@
-SynapseOS shortcuts  (Omarchy-style, Plasma)
+SynapseOS shortcuts  (Caelestia + Synapse)
 
-  Super + Shift + Space     Hyprland tiling on/off (restores windows)
-  Super + T                 Float / retile this window (while tiling)
-  Super + W                 Close window
-  Super + F                 Fullscreen
-  Super + Arrows            Focus window
-  Super + Shift + Arrows    Swap window
-  Super + 1 … 9 / 0         Desktop 1–10
-  Super + Shift + 1 … 0     Move window to that desktop
-  Super + Tab               Next desktop
-  Super + Shift + Tab       Previous desktop
-
+  Super (tap)               Caelestia launcher
+  Super + Space             SynapseOS menu (apps, install, power)
   Super + S                 Synapse assistant
-  Super + Space             System menu (apps, install, power)
-  Super + Alt + Space       App launcher (KRunner)
-  Super + Return            Terminal
-  Super + Shift + Return    Browser
+  Super + grave             Special workspace
+  Super + T                 Terminal (Kitty)
+  Super + Return            Terminal (Kitty)
+  Super + W                 Browser
+  Super + E                 Files (Thunar)
+  Super + C                 Editor
+  Super + Q                 Close window
+  Super + F                 Fullscreen
+  Super + Alt + Space       Float / tile this window
+  Super + Arrows            Focus window
+  Super + Shift + Arrows    Move window
+  Super + 1 … 9 / 0         Workspace 1–10
+  Super + Alt + 1 … 0       Move window to that workspace
+  Super + L                 Lock
+  Super + K                 Caelestia panels
+  Super + Shift + K         This cheat sheet
+  Super + Escape            Power menu
   Super + Shift + B         Browser
   Super + Shift + F         Files
   Super + Shift + N         Editor
-  Super + K                 This cheat sheet
-  Super + Escape            Power menu
-  Super + Ctrl + L          Lock
   Super + Ctrl + T          btop
   Super + Shift + D         lazydocker
-  Print                     Screenshot (Spectacle)
+  Print                     Screenshot
   Ctrl + Alt + T            Terminal
   Ctrl + Alt + S            Pause Synapse
+  Ctrl + Alt + Delete       Caelestia session menu
 
 Menu → Install
   Package                   Fuzzy-pick from official repos

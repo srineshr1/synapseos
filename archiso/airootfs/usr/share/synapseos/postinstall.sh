@@ -65,16 +65,9 @@ if ! id -u "$RESCUE_USER" > /dev/null 2>&1; then
 fi
 echo "${RESCUE_USER}:${RESCUE_PASS}" | chpasswd
 
-# Recovery login should not run the Plasma welcome wizard. The real user
-# created by Calamares already inherits /etc/skel (theme + layout).
-install -d -m 0755 -o "$RESCUE_USER" -g "$RESCUE_USER" \
-    "/home/${RESCUE_USER}/.config"
-printf '[General]\nShouldShow=false\n' \
-    > "/home/${RESCUE_USER}/.config/plasma-welcomerc"
-chown "$RESCUE_USER:$RESCUE_USER" "/home/${RESCUE_USER}/.config/plasma-welcomerc"
-
-# Installed system must stop at the SDDM greeter, not autologin as live.
-rm -f /etc/sddm.conf.d/20-autologin.conf
+# Installed system must stop at tuigreet, not autologin as live.
+# greetd.service is enabled by services-systemd; getty autologin is already
+# stripped above.
 
 # wheel alone is not enough: users.conf sets sudoersConfigureWithGroup: false,
 # so Calamares' /etc/sudoers.d/10-installer names the created user, not %wheel.
