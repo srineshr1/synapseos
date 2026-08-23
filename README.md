@@ -162,10 +162,11 @@ Notes:
 ### AUR packages
 
 `claude-code`, `openai-codex-bin`, `opencode-bin`, `helium-browser-bin`,
-`paru-bin`, `caelestia-cli`, `caelestia-shell`, `quickshell-git` and the other
-Caelestia AUR deps are not in the official repositories, so they are built on
-the build host and staged into `archiso/repo/`, which `pacman.conf` exposes to
-mkarchiso as `[synapseos-local]` (`SigLevel = Optional TrustAll`):
+`paru-bin`, `caelestia-cli`, `caelestia-shell`, `quickshell-git`,
+`python-materialyoucolor` and the other Caelestia AUR deps are not in the
+official repositories, so they are built on the build host and staged into
+`archiso/repo/`, which `pacman.conf` exposes to mkarchiso as
+`[synapseos-local]` (`SigLevel = Optional TrustAll`):
 
 ```bash
 ./tools/build-aur.sh                  # all of them, as a normal user
@@ -174,10 +175,19 @@ mkarchiso as `[synapseos-local]` (`SigLevel = Optional TrustAll`):
 
 Most of those are binary repacks. `quickshell-git` and `caelestia-shell` are
 compiled. `makepkg -d` skips the dependency checks (and the caelestia-cli /
-caelestia-shell circular optional depends) and the runtime dependencies are
-resolved from the official repositories inside the ISO. `*-debug` packages are filtered out. Note that Claude Code ships under a
-proprietary license, so redistributing an ISO containing it publicly is
-probably not permitted — check the terms before publishing images.
+caelestia-shell circular optional depends); `--skippgpcheck` covers AUR git
+tags signed by keys not on the build host. Runtime dependencies are resolved
+from the official repositories inside the ISO. `*-debug` packages are filtered
+out. `repo-add` re-indexes every staged package (no `--new`) so overwriting a
+same-version `.pkg.tar.zst` does not leave a stale checksum.
+
+ISO builds also set `DisableSandbox` in `archiso/pacman.conf`: Pacman 7
+downloads as user `alpm`, which cannot read the `file://` local repo under
+`$HOME`.
+
+Note that Claude Code ships under a proprietary license, so redistributing an
+ISO containing it publicly is probably not permitted — check the terms before
+publishing images.
 
 `calamares` is not in the official repositories *or* the AUR at the version this
 profile uses, so its recipe is vendored in `packaging/calamares/`. Unlike the
@@ -264,14 +274,14 @@ archiso 88; the `uefi-x64.grub.esp`-style names are deprecated stubs that fail.
 
 ## Installing
 
-Boot the ISO → Plasma appears (floating Macchiato panel) → **Install SynapseOS**
+Boot the ISO → Caelestia (Hyprland + Quickshell) starts → **Install SynapseOS**
 opens on its own (xdg-autostart). If it does not, launch it from the app
-menu or run `synapseos-installer`.
+launcher (Super tap) or run `synapseos-installer`.
 
 Calamares copies the live rootfs to disk (offline), then, in order: partitions
 and formats the disk, unpacks the squashfs, writes locale/keymap/fstab, fixes
 the mkinitcpio setup and rebuilds the initramfs, creates your user, enables
-NetworkManager and SDDM, installs GRUB (UEFI + BIOS), runs
+NetworkManager and greetd, installs GRUB (UEFI + BIOS), runs
 `postinstall.sh` to strip the live-media bits, and unmounts the target.
 
 The install image is fully self-contained — no network is required.
@@ -352,7 +362,7 @@ on the live overlay (originals kept as `*.orig`) and is idempotent.
 
 The live session used to copy the whole squashfs into RAM whenever
 archiso thought there was enough memory (`copytoram=auto`). On an 8G
-machine that is a 4G image plus Plasma plus a browser, so the OOM
+machine that is a ~5G image plus Hyprland plus a browser, so the OOM
 killer takes the session down.
 
 Default boot now keeps the image on the USB (`copytoram=n`) and caps
@@ -385,20 +395,20 @@ Intel has no TDX; ignore it. Safe graphics will not fix a SATA freeze.
 If the installer then reports I/O errors on `sda`, the drive itself is
 failing and needs replacing. The live session can still run from USB.
 
-### Desktop dies when you minimise a window or open an app
+### Desktop dies or never starts in a VM
 
-That is KWin failing to compose (usually missing 3D in a VM), not the
+Usually missing or flaky 3D / DRM in the guest, not the
 `SSH_AUTH_SOCK not set` line that can flash on tty1. On an ISO built
 before the compositor workarounds, copy this checkout into the live
 session (shared folder, scp, USB) and run:
 
 ```bash
-sudo ./tools/live-hotfix-desktop.sh   # then log out of Plasma, or reboot
+sudo ./tools/live-hotfix-desktop.sh   # then log out of Hyprland, or reboot
 ```
 
 It installs `/etc/profile.d/synapseos-{graphics,ssh-agent}.sh`,
 `synapseos-safe-graphics`, and the PAM/gcr bits. After a session restart the
-minimise crash should stop. If it does not, `sudo synapseos-safe-graphics on`
+desktop should stay up. If it does not, `sudo synapseos-safe-graphics on`
 and log out again.
 
 ## Customizing
@@ -417,7 +427,7 @@ and log out again.
 | Installed-system cleanup       | `archiso/airootfs/usr/share/synapseos/postinstall.sh`                      |
 | Installer wizard behavior      | `archiso/airootfs/etc/calamares/modules/*.conf` and `settings.conf`        |
 | Installer art + slideshow      | `tools/gen-branding.py`, then `archiso/.../branding/synapseos/`             |
-| Desktop crash on minimise      | `airootfs/etc/profile.d/synapseos-graphics.sh` + `synapseos-safe-graphics` |
+| VM / missing-3D desktop crash  | `airootfs/etc/profile.d/synapseos-graphics.sh` + `synapseos-safe-graphics` |
 | `SSH_AUTH_SOCK not set` flash  | `airootfs/etc/profile.d/synapseos-ssh-agent.sh` (harmless; tty leftover)   |
 | GRUB defaults of installed sys | `archiso/airootfs/etc/default/grub` (+ `modules/grubcfg.conf`)             |
 | GRUB menu look / entries       | `archiso/grub/` (`theme/` + grub.cfg; art from `tools/gen-branding.py`)    |
@@ -558,9 +568,10 @@ The profile turns it into something useful instead of silencing it:
 socket if needed) so the import always has a value. An inherited
 `SSH_AUTH_SOCK` (agent forwarding) is never overwritten.
 
-When KWin dies the compositor surface goes away and that leftover tty1
-line can flash through, which is why it looks like the SSH notice killed
-the desktop. Fix the crash (safe graphics) and the flash goes with it.
+When Hyprland or Quickshell dies the compositor surface goes away and that
+leftover tty1 line can flash through, which is why it looks like the SSH
+notice killed the desktop. Fix the crash (safe graphics) and the flash goes
+with it.
 
 On an already-installed system, without rebuilding:
 

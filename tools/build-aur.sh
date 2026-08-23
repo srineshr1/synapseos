@@ -23,6 +23,7 @@ PACKAGES=(
     darkly-bin
     pwvucontrol
     qtengine
+    python-materialyoucolor  # caelestia-cli dependency (AUR)
     quickshell-git      # compile; pin via the AUR PKGBUILD
     caelestia-cli
     caelestia-shell
@@ -62,7 +63,9 @@ for pkg in "${PACKAGES[@]}"; do
 
     # -d: skip dependency checks (runtime deps are resolved inside the ISO)
     # -f: overwrite an existing package, -c: clean up src/ afterwards
-    ( cd "${build_dir}" && makepkg -dcf --noconfirm --noprogressbar )
+    # --skippgpcheck: AUR git tags are often signed by keys not on this host;
+    # we already trust the PKGBUILD by cloning it.
+    ( cd "${build_dir}" && makepkg -dcf --noconfirm --noprogressbar --skippgpcheck )
 
     while IFS= read -r -d '' file; do
         # makepkg also emits *-debug packages; they have no place in the ISO.
@@ -80,8 +83,10 @@ if (( ${#built[@]} == 0 )); then
     exit 1
 fi
 
-# Keep every already-staged package in the database, not just the new ones.
-repo-add --quiet --new --remove "${repo_dir}/${db_name}.db.tar.gz" "${repo_dir}"/*.pkg.tar.zst
+# Re-index every staged package. Do not use --new: staging can overwrite a
+# same-version .pkg.tar.zst (install -m 0644), and --new would leave a stale
+# %CSIZE%/%SHA256SUM% that pacman then rejects as "maximum allowed file size".
+repo-add --quiet --remove "${repo_dir}/${db_name}.db.tar.gz" "${repo_dir}"/*.pkg.tar.zst
 
 echo
 echo "Repository ${repo_dir}/${db_name}.db now contains:"
