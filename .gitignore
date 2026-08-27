@@ -22,3 +22,27 @@ packaging/*/*.pkg.tar.zst
 __pycache__/
 *.pyc
 .iso-upload-secret
+
+# Firebase
+.firebase/
+.firebaserc
+firebase.json
+
+# Playwright
+.playwright-mcp/
+
+# Temp ISO directories
+.tmp-iso/
+.tmp-iso14/
+
+# Presentation files
+*.pptx
+
+# Diagrams (auto-generated)
+docs/diagrams/
+
+# Build output
+site/
+
+# Screenshots
+*.png

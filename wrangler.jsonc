@@ -1,0 +1,22 @@
+{
+  "name": "synapseaios",
+  "compatibility_date": "2026-08-15",
+  "main": "worker/index.js",
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": {
+    "directory": "./site",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/downloads",
+      "/downloads/*",
+      "/_admin/*"
+    ]
+  },
+  "r2_buckets": [
+    {
+      "binding": "ISOS",
+      "bucket_name": "synapseos-isos"
+    }
+  ]
+}
