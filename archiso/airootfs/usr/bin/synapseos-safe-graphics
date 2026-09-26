@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Persist Hyprland safe-graphics mode.
 #
-#   synapseos-safe-graphics on      # WLR_RENDERER=pixman (no GPU blur)
-#   synapseos-safe-graphics off     # never apply pixman
-#   synapseos-safe-graphics auto    # default: GPU; VMs still get software Qt
+#   synapseos-safe-graphics on      # Mesa llvmpipe (no GPU blur)
+#   synapseos-safe-graphics off     # never apply workarounds
+#   synapseos-safe-graphics auto    # default: GPU when virgl is present;
+#                                   # VMs still get software Qt Quick
 #   synapseos-safe-graphics status
 set -uo pipefail
 
@@ -27,9 +28,9 @@ show_status() {
     if [[ -e "$OFF" ]]; then
         echo "mode: off  (workarounds disabled everywhere)"
     elif [[ -e "$ON" ]]; then
-        echo "mode: on   (WLR_RENDERER=pixman always)"
+        echo "mode: on   (Mesa llvmpipe always)"
     else
-        echo "mode: auto (GPU; boot safegfx or run 'on' if the desktop fails)"
+        echo "mode: auto (GPU when virgl is present; boot safegfx or run 'on' if the desktop fails)"
     fi
     if command -v systemd-detect-virt > /dev/null; then
         echo "virtualisation: $(systemd-detect-virt)"
@@ -37,6 +38,10 @@ show_status() {
     echo "in this shell:"
     printf '  WLR_RENDERER=%s\n' "${WLR_RENDERER:-unset}"
     printf '  QT_QUICK_BACKEND=%s\n' "${QT_QUICK_BACKEND:-unset}"
+    printf '  QSG_RENDER_LOOP=%s\n' "${QSG_RENDER_LOOP:-unset}"
+    printf '  LIBGL_ALWAYS_SOFTWARE=%s\n' "${LIBGL_ALWAYS_SOFTWARE:-unset}"
+    printf '  GALLIUM_DRIVER=%s\n' "${GALLIUM_DRIVER:-unset}"
+    printf '  SYNAPSEOS_VM=%s\n' "${SYNAPSEOS_VM:-unset}"
 }
 
 case "${1:-status}" in

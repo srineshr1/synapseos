@@ -1,5 +1,19 @@
 -- SynapseOS session extras. Loaded after Caelestia keybinds.
 
+-- virtio-vga (no 3D) and virgl both choke on blur/hw cursors. Keep the
+-- compositor painting a desktop instead of a black frame.
+if os.getenv("SYNAPSEOS_VM") == "1" or os.getenv("LIBGL_ALWAYS_SOFTWARE") == "1" then
+    hl.config({
+        decoration = {
+            blur = { enabled = false },
+            shadow = { enabled = false },
+        },
+        cursor = {
+            no_hardware_cursors = true,
+        },
+    })
+end
+
 hl.bind("SUPER + S", hl.dsp.exec_cmd("synapseos-overlay"))
 hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("synapseos menu"))
 hl.bind("SUPER + Return", hl.dsp.exec_cmd("kitty"))
@@ -35,12 +49,7 @@ hl.window_rule({
 })
 
 hl.on("hyprland.start", function()
-    hl.exec_cmd("dbus-update-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE HYPRLAND_INSTANCE_SIGNATURE")
-    hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE HYPRLAND_INSTANCE_SIGNATURE DISPLAY")
-    hl.exec_cmd("systemctl --user start graphical-session.target")
-    hl.exec_cmd("systemctl --user start synapse-core.service")
-    hl.exec_cmd("sh -c 'test -f \"${XDG_STATE_HOME:-$HOME/.local/state}/caelestia/scheme.json\" || caelestia scheme set -n caelestia'")
-    hl.exec_cmd("caelestia wallpaper -f /usr/share/backgrounds/synapseos/desktop.png")
+    hl.exec_cmd("synapseos-start-desktop")
     if os.getenv("SYNAPSEOS_SESSION_AUTOSTART") then
         hl.exec_cmd("synapseos-installer --autostart")
     end

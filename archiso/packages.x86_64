@@ -8,7 +8,7 @@ bcachefs-tools
 bind
 bolt
 brltty
-broadcom-wl
+broadcom-wl-dkms
 btrfs-progs
 clonezilla
 cloud-init
@@ -41,6 +41,7 @@ hyperv
 intel-ucode
 irssi
 iw
+iptables
 iwd
 jfsutils
 kitty-terminfo
@@ -169,6 +170,7 @@ gtk3
 pipewire
 pipewire-pulse
 pipewire-alsa
+pipewire-jack
 wireplumber
 grim
 slurp

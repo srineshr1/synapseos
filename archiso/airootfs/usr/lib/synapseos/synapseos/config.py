@@ -17,16 +17,21 @@ except ImportError:  # pragma: no cover
 
 
 MODES = ("observe", "assist", "act")
-DEFAULT_MODEL = "grok-4.6"
-DEFAULT_BASE_URL = "https://api.x.ai/v1"
 
 
 @dataclass
 class ModelConfig:
-    provider: str = "xai"
-    base_url: str = DEFAULT_BASE_URL
-    model: str = DEFAULT_MODEL
+    # Decision model. auto uses Jev when a TypeSafe key is set.
+    provider: str = "auto"
+    base_url: str = ""
+    model: str = ""
     api_key: str = ""
+    # Reply model. Jev returns no text, so a chat model writes the sentence.
+    # auto uses a local small model when one is already being served.
+    reply_provider: str = "auto"
+    reply_base_url: str = ""
+    reply_model: str = ""
+    reply_api_key: str = ""
 
 
 @dataclass
@@ -47,12 +52,14 @@ class Config:
     overlay: OverlayConfig = field(default_factory=OverlayConfig)
 
     def api_key(self) -> str:
-        return (
-            os.environ.get("XAI_API_KEY")
-            or os.environ.get("SYNAPSEOS_API_KEY")
-            or self.model.api_key
-            or ""
-        ).strip()
+        from .runtime import key_env_names
+        provider = (self.model.provider or "auto").strip().lower()
+        lookup = "typesafe" if provider in {"", "auto", "local"} else provider
+        for name in key_env_names(lookup):
+            value = os.environ.get(name, "").strip()
+            if value:
+                return value
+        return (self.model.api_key or "").strip()
 
     def has_key(self) -> bool:
         return bool(self.api_key())
@@ -93,9 +100,15 @@ def save(cfg: Config, path: Path | None = None) -> None:
         raise
 
 
-def set_api_key(key: str, path: Path | None = None) -> Config:
+def set_api_key(key: str, path: Path | None = None, provider: str = "",
+                base_url: str = "", model: str = "") -> Config:
+    from .runtime import apply_provider
     cfg = load(path)
-    cfg.model.api_key = key.strip()
+    chosen = (provider or "").strip().lower()
+    if not chosen or chosen == "auto":
+        current = (cfg.model.provider or "typesafe").strip().lower()
+        chosen = "typesafe" if current in {"", "auto", "local"} else current
+    apply_provider(cfg, chosen, key, base_url, model)
     save(cfg, path)
     return cfg
 
@@ -103,8 +116,20 @@ def set_api_key(key: str, path: Path | None = None) -> Config:
 def _clamp(cfg: Config) -> Config:
     if cfg.policy.mode not in MODES:
         cfg.policy.mode = "assist"
-    cfg.model.base_url = (cfg.model.base_url or DEFAULT_BASE_URL).rstrip("/")
-    cfg.model.model = cfg.model.model or DEFAULT_MODEL
+    provider = (cfg.model.provider or "auto").strip().lower()
+    legacy = (
+        provider in {"xai", "grok"}
+        or "api.x.ai" in (cfg.model.base_url or "")
+        or (cfg.model.model or "").startswith("grok")
+    )
+    if legacy:
+        cfg.model.provider = "auto"
+        cfg.model.base_url = ""
+        cfg.model.model = ""
+        cfg.model.api_key = ""
+    else:
+        cfg.model.provider = provider or "auto"
+        cfg.model.base_url = (cfg.model.base_url or "").rstrip("/")
     return cfg
 
 
@@ -119,7 +144,7 @@ def _apply(obj: Any, data: Any) -> None:
 def _dump(cfg: Config) -> str:
     raw = asdict(cfg)
     lines = [
-        "# SynapseOS assistant. Mode 0600. Prefer XAI_API_KEY in the environment.",
+        "# SynapseOS assistant. Mode 0600. Prefer TYPESAFE_API_KEY in the environment.",
         "",
     ]
     for section, values in raw.items():

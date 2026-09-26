@@ -24,6 +24,7 @@ PACKAGES=(
     pwvucontrol
     qtengine
     python-materialyoucolor  # caelestia-cli dependency (AUR)
+    qt6-m3shapes-git    # caelestia-shell 2.5 dependency (AUR, compile)
     quickshell-git      # compile; pin via the AUR PKGBUILD
     caelestia-cli
     caelestia-shell

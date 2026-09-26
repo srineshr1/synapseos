@@ -32,7 +32,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("resume", help="kill switch off")
     p_audit = sub.add_parser("audit", help="recent audit log")
     p_audit.add_argument("-n", type=int, default=20)
-    p_key = sub.add_parser("key", help="set or check the xAI API key")
+    p_key = sub.add_parser("key", help="set or check the model provider and API key")
     p_key.add_argument("action", choices=("set", "check"))
     sub.add_parser("ping", help="is the core up?")
     p_call = sub.add_parser("call", help="raw MCP tool call")
@@ -117,18 +117,39 @@ def _dispatch(cli: CoreClient, args: argparse.Namespace) -> int:
     if args.cmd == "key":
         if args.action == "check":
             st = cli.call("synapse/status")
-            print("configured" if st.get("has_key") else "missing")
-            return 0 if st.get("has_key") else 2
-        key = getpass.getpass("XAI_API_KEY: ").strip()
-        if not key:
-            print("empty key", file=sys.stderr)
+            if st.get("ready"):
+                print(f"{st.get('backend')}  provider={st.get('provider')}  model={st.get('model')}")
+                return 0
+            print("missing")
+            if st.get("capable"):
+                print("This PC can run a small model. Start one, or set a provider.", file=sys.stderr)
+            else:
+                print("Set a provider and API key. TypeSafe Jev is the fast default.", file=sys.stderr)
             return 2
-        cli.call("synapse/set_key", {"key": key})
+        provider = input("Provider [typesafe/openai/openrouter/custom/local] (typesafe): ").strip().lower() or "typesafe"
+        base_url = ""
+        model = ""
+        key = ""
+        if provider == "custom":
+            base_url = input("Base URL: ").strip()
+            model = input("Model: ").strip()
+        elif provider != "local":
+            model = input("Model (blank for the provider default): ").strip()
+            key = getpass.getpass("API key: ").strip()
+            if not key:
+                print("empty key", file=sys.stderr)
+                return 2
+        cli.call("synapse/set_key", {
+            "key": key, "provider": provider, "base_url": base_url, "model": model,
+        })
         print("saved")
         return 0
     if args.cmd == "ping":
         st = cli.call("synapse/status")
-        print(f"ok  pid={st.get('pid')}  mode={st.get('mode')}  key={st.get('has_key')}")
+        print(
+            f"ok  pid={st.get('pid')}  mode={st.get('mode')}  "
+            f"backend={st.get('backend')}  model={st.get('model')}"
+        )
         return 0
     if args.cmd == "call":
         try:
@@ -159,7 +180,10 @@ def _print_event(event: dict[str, Any]) -> None:
 def _print_ask(result: dict[str, Any]) -> None:
     status = result.get("status")
     if status == "needs_key":
-        print("No API key. Run:  synapsectl key set", file=sys.stderr)
+        print(result.get("error") or "No API key. Run:  synapsectl key set", file=sys.stderr)
+        return
+    if status == "needs_runtime":
+        print(result.get("error") or "No local model is running.", file=sys.stderr)
         return
     if status == "needs_consent":
         print(f"\nNeeds consent: {result.get('summary')}")

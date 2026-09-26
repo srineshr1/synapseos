@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch Calamares as root from the live Plasma session.
+# Launch Calamares as root from the live Hyprland session.
 #
 # `sudo calamares` does not work here: sudo resets the environment, so the
 # installer starts with no WAYLAND_DISPLAY/XDG_RUNTIME_DIR, fails to connect to
@@ -42,7 +42,7 @@ if [[ "${1:-}" == --autostart ]]; then
     # Panel/dock finish starting; opening immediately lands under a blank frame.
     sleep 2
     export XDG_SESSION_TYPE="${XDG_SESSION_TYPE:-wayland}"
-    export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-KDE}"
+    export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-Hyprland}"
 fi
 
 # Publish /run/synapseos/airootfs.sfs before Calamares starts. On bare-metal

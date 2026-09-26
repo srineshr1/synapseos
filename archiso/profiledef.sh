@@ -27,6 +27,7 @@ file_permissions=(
   ["/usr/bin/synapseos-logs"]="0:0:755"
   ["/usr/bin/synapseos-safe-graphics"]="0:0:755"
   ["/usr/bin/synapseos-session"]="0:0:755"
+  ["/usr/bin/synapseos-start-desktop"]="0:0:755"
   ["/usr/bin/synapseos-core"]="0:0:755"
   ["/usr/bin/synapseos-overlay"]="0:0:755"
   ["/usr/bin/synapseos-mcp"]="0:0:755"

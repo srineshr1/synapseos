@@ -8,5 +8,13 @@
     },
     "paths": {
         "wallpaperDir": "/usr/share/backgrounds/synapseos"
+    },
+    "bar": {
+        "persistent": true
+    },
+    "background": {
+        "visualiser": {
+            "enabled": false
+        }
     }
 }

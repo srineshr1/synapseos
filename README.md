@@ -133,9 +133,10 @@ default **assist** mode. Kill, throttle, close and `shell_run` ask first.
 PID 1, Hyprland, Quickshell and the core itself cannot be killed. Ctrl+Alt+S
 is the kill switch.
 
-The planner and the mic use SpaceXAI (`XAI_API_KEY` or `synapsectl key set`).
-Without a key the overlay still lists local state; it will not pretend a
-cloud call succeeded.
+Jev picks the tool (`TYPESAFE_API_KEY` or `synapsectl key set`). Jev does not
+write text, so a local chat model writes the reply when Ollama or llama.cpp
+is already serving one. The overlay never asks for a key. Voice input is
+typed; there is no cloud speech API.
 
 ```bash
 # Attach a preinstalled coding agent to the OS tool server

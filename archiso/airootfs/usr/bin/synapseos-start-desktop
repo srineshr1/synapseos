@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Finish the live/installed Hyprland session: user bus, Caelestia shell,
+# wallpaper. Invoked from hypr-user.lua on hyprland.start. exec_cmd is
+# async, so everything that has to run in order lives in this one script.
+set -uo pipefail
+
+# shellcheck disable=SC1091
+[ -r /etc/profile.d/synapseos-graphics.sh ] && . /etc/profile.d/synapseos-graphics.sh
+
+LOG_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/synapseos"
+LOG="$LOG_DIR/session.log"
+mkdir -p "$LOG_DIR"
+
+log() { printf '%s\n' "$*" >> "$LOG"; }
+
+log "=== synapseos-start-desktop: $(date -Is) ==="
+log "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-unset} SYNAPSEOS_VM=${SYNAPSEOS_VM:-unset}"
+log "QT_QUICK_BACKEND=${QT_QUICK_BACKEND:-unset} QSG_RENDER_LOOP=${QSG_RENDER_LOOP:-unset}"
+log "LIBGL_ALWAYS_SOFTWARE=${LIBGL_ALWAYS_SOFTWARE:-unset} GALLIUM_DRIVER=${GALLIUM_DRIVER:-unset}"
+
+dbus-update-environment --systemd \
+    WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE \
+    HYPRLAND_INSTANCE_SIGNATURE DISPLAY \
+    QT_QUICK_BACKEND QSG_RHI_BACKEND QSG_RENDER_LOOP \
+    AQ_NO_MODIFIERS LIBGL_ALWAYS_SOFTWARE GALLIUM_DRIVER SYNAPSEOS_VM \
+    2>> "$LOG" || true
+
+systemctl --user import-environment \
+    WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE \
+    HYPRLAND_INSTANCE_SIGNATURE DISPLAY \
+    QT_QUICK_BACKEND QSG_RHI_BACKEND QSG_RENDER_LOOP \
+    AQ_NO_MODIFIERS LIBGL_ALWAYS_SOFTWARE GALLIUM_DRIVER SYNAPSEOS_VM \
+    2>> "$LOG" || true
+
+systemctl --user start graphical-session.target 2>> "$LOG" || true
+systemctl --user start synapse-core.service 2>> "$LOG" || true
+
+scheme="${XDG_STATE_HOME:-$HOME/.local/state}/caelestia/scheme.json"
+if [[ ! -f "$scheme" ]]; then
+    caelestia scheme set -n caelestia >> "$LOG" 2>&1 || log "WARN: caelestia scheme set failed"
+fi
+
+qs_running() {
+    pgrep -u "$(id -u)" -x quickshell >/dev/null 2>&1 \
+        || pgrep -u "$(id -u)" -f '[q]s -c caelestia' >/dev/null 2>&1
+}
+
+start_shell() {
+    if qs_running; then
+        return 0
+    fi
+    log "starting caelestia shell"
+    # Do not pass -d: daemonize dumps stdout to /dev/null. Keep the log.
+    nohup caelestia shell >> "$LOG" 2>&1 &
+    disown || true
+}
+
+start_shell
+
+# Wallpaper talks to the running shell; wait a beat if qs is still spawning.
+for _ in 1 2 3 4 5 6 7 8; do
+    qs_running && break
+    sleep 0.5
+    start_shell
+done
+
+if [[ -f /usr/share/backgrounds/synapseos/desktop.png ]]; then
+    caelestia wallpaper -f /usr/share/backgrounds/synapseos/desktop.png >> "$LOG" 2>&1 \
+        || log "WARN: caelestia wallpaper failed"
+fi
+
+if ! qs_running; then
+    log "ERROR: Caelestia shell did not start"
+    if [[ -n "${SYNAPSEOS_SESSION_AUTOSTART:-}" ]] && command -v kitty >/dev/null; then
+        kitty --title "SynapseOS desktop" -e bash -lc \
+            'echo "Caelestia shell did not start."; echo; synapseos-check-desktop; echo; echo "Retry: caelestia shell"; echo "Log: ~/.cache/synapseos/session.log"; echo; exec zsh' \
+            >> "$LOG" 2>&1 &
+        disown || true
+    fi
+    exit 1
+fi
+
+log "caelestia shell is running (pid $(pgrep -u "$(id -u)" -x quickshell | head -1))"
+exit 0

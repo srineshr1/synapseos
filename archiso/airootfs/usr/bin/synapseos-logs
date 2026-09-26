@@ -64,7 +64,11 @@ have() { command -v "$1" > /dev/null 2>&1; }
     section "compositor workaround variables"
     printf 'WLR_RENDERER=%s\n' "${WLR_RENDERER:-unset}"
     printf 'QT_QUICK_BACKEND=%s\n' "${QT_QUICK_BACKEND:-unset}"
+    printf 'QSG_RENDER_LOOP=%s\n' "${QSG_RENDER_LOOP:-unset}"
     printf 'AQ_NO_MODIFIERS=%s\n' "${AQ_NO_MODIFIERS:-unset}"
+    printf 'LIBGL_ALWAYS_SOFTWARE=%s\n' "${LIBGL_ALWAYS_SOFTWARE:-unset}"
+    printf 'GALLIUM_DRIVER=%s\n' "${GALLIUM_DRIVER:-unset}"
+    printf 'SYNAPSEOS_VM=%s\n' "${SYNAPSEOS_VM:-unset}"
     have systemd-detect-virt && echo "virtualisation: $(systemd-detect-virt)"
 
     section "session log"

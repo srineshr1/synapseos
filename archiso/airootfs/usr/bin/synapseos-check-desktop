@@ -15,7 +15,11 @@ printf 'virtualisation=%s\n' "$(systemd-detect-virt 2>/dev/null || echo none)"
 printf 'WLR_RENDERER=%s\n' "${WLR_RENDERER:-unset}"
 printf 'QT_QUICK_BACKEND=%s\n' "${QT_QUICK_BACKEND:-unset}"
 printf 'QSG_RHI_BACKEND=%s\n' "${QSG_RHI_BACKEND:-unset}"
+printf 'QSG_RENDER_LOOP=%s\n' "${QSG_RENDER_LOOP:-unset}"
 printf 'AQ_NO_MODIFIERS=%s\n' "${AQ_NO_MODIFIERS:-unset}"
+printf 'LIBGL_ALWAYS_SOFTWARE=%s\n' "${LIBGL_ALWAYS_SOFTWARE:-unset}"
+printf 'GALLIUM_DRIVER=%s\n' "${GALLIUM_DRIVER:-unset}"
+printf 'SYNAPSEOS_VM=%s\n' "${SYNAPSEOS_VM:-unset}"
 
 echo
 echo "=== hyprctl ==="
@@ -39,12 +43,16 @@ else
     echo "WARN: stock wallpaper missing"
 fi
 
-if [[ "${WLR_RENDERER:-}" == pixman ]]; then
-    echo "WARN: software compositor — GPU blur cannot run. Reboot without safegfx,"
-    echo "      or: sudo synapseos-safe-graphics off && loginctl terminate-user $USER"
+if [[ "${LIBGL_ALWAYS_SOFTWARE:-}" == 1 || "${GALLIUM_DRIVER:-}" == llvmpipe ]]; then
+    echo "WARN: software GL (llvmpipe) — GPU blur cannot run. Enable 3D on the VM"
+    echo "      video device, or: sudo synapseos-safe-graphics off && loginctl terminate-user $USER"
 fi
 if [[ "${QT_QUICK_BACKEND:-}" == software ]]; then
     echo "note: software Qt Quick (VM workaround for virgl dmabuf import)"
+fi
+if [[ "${QSG_RENDER_LOOP:-}" == threaded && "${QT_QUICK_BACKEND:-}" == software ]]; then
+    echo "WARN: QSG_RENDER_LOOP=threaded with software Qt — Caelestia will not paint."
+    echo "      export QSG_RENDER_LOOP=basic and restart: caelestia shell"
 fi
 
 echo

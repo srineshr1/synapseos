@@ -244,15 +244,6 @@ class Overlay:  # noqa: PLR0904 — UI surface
         self.btn_deny.hide()
         root.addLayout(self.consent_row)
 
-        self.key_row = QHBoxLayout()
-        self.key_edit = QLineEdit()
-        self.key_edit.setEchoMode(QLineEdit.Password)
-        self.key_edit.setPlaceholderText("Paste XAI_API_KEY and press Enter")
-        self.key_edit.setStyleSheet(self._input_css())
-        self.key_edit.returnPressed.connect(self._save_key)
-        self.key_row.addWidget(self.key_edit)
-        root.addLayout(self.key_row)
-
         bottom = QHBoxLayout()
         self.mic = self._button("  hold to talk  ", MAUVE, CRUST)
         self.mic.setCheckable(False)
@@ -349,22 +340,7 @@ class Overlay:  # noqa: PLR0904 — UI surface
             self.chip.setStyleSheet(self._chip_css(RED))
         else:
             self.chip.setText(str(st.get("mode") or "assist").upper())
-            self.chip.setStyleSheet(self._chip_css(GREEN if st.get("has_key") else YELLOW))
-        self.key_edit.setVisible(not bool(st.get("has_key")))
-
-    def _save_key(self) -> None:
-        key = self.key_edit.text().strip()
-        if not key:
-            return
-        try:
-            self._cli().call("synapse/set_key", {"key": key})
-        except ClientError as exc:
-            self.body.setPlainText(str(exc))
-            return
-        self.key_edit.clear()
-        self.key_edit.hide()
-        self._refresh_status()
-        self.body.setPlainText("API key saved. Ask something.")
+            self.chip.setStyleSheet(self._chip_css(GREEN))
 
     def _submit(self) -> None:
         text = self.input.text().strip()
@@ -408,10 +384,9 @@ class Overlay:  # noqa: PLR0904 — UI surface
 
     def _apply_result(self, result: dict) -> None:
         status = result.get("status")
-        if status == "needs_key":
-            self.key_edit.show()
-            self.key_edit.setFocus()
-            self.body.setPlainText("Paste an xAI API key to let Synapse talk to the model.")
+        if status in {"needs_key", "needs_runtime"}:
+            self.body.setPlainText(str(result.get("error") or "The assistant is not set up yet."))
+            self.input.setFocus()
             return
         if status == "needs_consent":
             self.consent_id = str(result.get("consent_id") or "")

@@ -9,6 +9,7 @@ import stat
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +19,8 @@ import sys
 sys.path.insert(0, str(LIB))
 
 from synapseos.config import Config, _dump, load, save  # noqa: E402
+from synapseos.decide import decision_from_chat, decision_from_jev  # noqa: E402
+from synapseos.runtime import reset_probe_cache, resolve  # noqa: E402
 from synapseos.mcp import read_message, write_message  # noqa: E402
 from synapseos.perception.apps import DesktopApp, match_app, parse_desktop_file  # noqa: E402
 from synapseos.perception.proc import (  # noqa: E402
@@ -252,13 +255,24 @@ class McpTests(unittest.TestCase):
         self.assertIn("list", result["error"])
 
     def test_ask_needs_key(self) -> None:
-        core = Core(Config(), procfs="/proc", db_path=None)
-        reply = core.handle(
-            {"jsonrpc": "2.0", "id": 4, "method": "synapse/ask",
-             "params": {"text": "what is running"}},
-            lambda m: None,
-        )
+        # A small machine has no local model, so the assistant asks for a provider.
+        with patch.dict(os.environ, {
+            "SYNAPSEOS_LOCAL": "0",
+            "TYPESAFE_API_KEY": "",
+            "SYNAPSEOS_API_KEY": "",
+            "OPENAI_API_KEY": "",
+            "OPENROUTER_API_KEY": "",
+        }):
+            core = Core(Config(), procfs="/proc", db_path=None)
+            reply = core.handle(
+                {"jsonrpc": "2.0", "id": 4, "method": "synapse/ask",
+                 "params": {"text": "what is running"}},
+                lambda m: None,
+            )
         self.assertEqual(reply["result"]["status"], "needs_key")
+        providers = {item["id"] for item in reply["result"]["providers"]}
+        self.assertIn("typesafe", providers)
+        self.assertNotIn("xai", reply["result"]["error"].lower())
 
     def test_sudo_blocked(self) -> None:
         core = Core(Config(), procfs="/proc", db_path=None)
@@ -280,7 +294,72 @@ class ConfigTests(unittest.TestCase):
             loaded = load(path)
             self.assertEqual(loaded.model.api_key, "xai-test")
             self.assertEqual(loaded.policy.mode, "observe")
+            self.assertEqual(loaded.model.provider, "auto")
             self.assertIn("[model]", _dump(cfg))
+
+    def test_legacy_xai_config_is_cleared(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "config.toml"
+            path.write_text(
+                '[model]\nprovider = "xai"\nbase_url = "https://api.x.ai/v1"\n'
+                'model = "grok-4.6"\napi_key = "xai-secret"\n',
+                encoding="utf-8",
+            )
+            loaded = load(path)
+            self.assertEqual(loaded.model.provider, "auto")
+            self.assertEqual(loaded.model.api_key, "")
+            self.assertEqual(loaded.model.model, "")
+            self.assertNotIn("x.ai", loaded.model.base_url)
+
+    def test_jev_choice_becomes_a_tool_call(self) -> None:
+        decision = decision_from_jev({
+            "tool": {"type": "choice", "choice": "apps_focus", "confidence": 0.9},
+            "app": {"type": "choice", "choice": "Firefox", "confidence": 0.8},
+            "pid": {"type": "choice", "choice": "none", "confidence": 1},
+            "sort": {"type": "choice", "choice": "none"},
+            "percent": {"type": "choice", "choice": "none"},
+            "mode": {"type": "choice", "choice": "none"},
+            "force": {"type": "noul", "noul": 0.1},
+            "paused": {"type": "noul", "noul": 0.2},
+        })
+        self.assertEqual(decision["tool"], "apps_focus")
+        self.assertEqual(decision["query"], "Firefox")
+        self.assertIsNone(decision["pid"])
+        self.assertAlmostEqual(decision["confidence"], 0.8)
+
+    def test_chat_json_and_local_route(self) -> None:
+        decision = decision_from_chat(
+            '```json\n{"tool":"proc_kill","pid":"42","force":false,"confidence":0.7}\n```'
+        )
+        self.assertEqual(decision["tool"], "proc_kill")
+        self.assertEqual(decision["pid"], 42)
+        reset_probe_cache()
+        with patch.dict(os.environ, {
+            "SYNAPSEOS_LOCAL": "1",
+            "SYNAPSEOS_LOCAL_URL": "http://127.0.0.1:9/v1",
+            "TYPESAFE_API_KEY": "",
+            "SYNAPSEOS_API_KEY": "",
+        }):
+            route = resolve(Config())
+        self.assertEqual(route.kind, "needs_runtime")
+        self.assertTrue(route.capable)
+
+    def test_jev_decides_and_does_not_write(self) -> None:
+        from synapseos.runtime import jev_key, resolve_reply
+        reset_probe_cache()
+        with patch.dict(os.environ, {
+            "SYNAPSEOS_LOCAL": "0",
+            "SYNAPSEOS_LOCAL_URL": "http://127.0.0.1:9/v1",
+            "TYPESAFE_API_KEY": "ts-test",
+            "SYNAPSEOS_API_KEY": "",
+            "OPENAI_API_KEY": "",
+        }):
+            route = resolve(Config())
+            self.assertEqual(jev_key(Config()), "ts-test")
+            self.assertIsNone(resolve_reply(Config()))
+        self.assertEqual(route.wire, "jev")
+        self.assertEqual(route.provider, "typesafe")
+        self.assertEqual(route.model, "jev-latest")
 
 
 class DesktopConfigTests(unittest.TestCase):
@@ -342,7 +421,13 @@ class DesktopConfigTests(unittest.TestCase):
         self.assertIn("synapseos-overlay", user)
         self.assertIn("SUPER + SPACE", user)
         self.assertIn("synapseos menu", user)
-        self.assertIn("graphical-session.target", user)
+        self.assertIn("synapseos-start-desktop", user)
+        self.assertIn("no_hardware_cursors", user)
+        start_desktop = (
+            ROOT / "archiso/airootfs/usr/bin/synapseos-start-desktop"
+        ).read_text(encoding="utf-8")
+        self.assertIn("graphical-session.target", start_desktop)
+        self.assertIn("caelestia shell", start_desktop)
         hypr = ROOT / "archiso/airootfs/etc/skel/.config/hypr/hyprland.lua"
         self.assertTrue(hypr.is_file())
         pin = (
@@ -365,8 +450,12 @@ class DesktopConfigTests(unittest.TestCase):
             ROOT / "archiso/airootfs/etc/profile.d/synapseos-graphics.sh"
         ).read_text(encoding="utf-8")
         self.assertIn('QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}"', gfx)
+        self.assertIn('QSG_RENDER_LOOP="${QSG_RENDER_LOOP:-basic}"', gfx)
         self.assertIn("systemd-detect-virt", gfx)
         self.assertIn("WLR_RENDERER", gfx)
+        self.assertIn("LIBGL_ALWAYS_SOFTWARE", gfx)
+        self.assertIn("GALLIUM_DRIVER", gfx)
+        self.assertIn("virtio_gpu", gfx)
         self.assertNotIn("KWIN_COMPOSE", gfx)
         gen = (
             ROOT
@@ -375,12 +464,32 @@ class DesktopConfigTests(unittest.TestCase):
         )
         self.assertTrue(gen.is_file())
         self.assertTrue(stat.S_IXUSR & gen.stat().st_mode)
-        self.assertIn("synapseos-graphics.sh", gen.read_text(encoding="utf-8"))
+        gen_text = gen.read_text(encoding="utf-8")
+        self.assertIn("synapseos-graphics.sh", gen_text)
+        self.assertIn("QSG_RENDER_LOOP", gen_text)
+        self.assertIn("SYNAPSEOS_VM", gen_text)
+        start = ROOT / "archiso/airootfs/usr/bin/synapseos-start-desktop"
+        self.assertTrue(start.is_file())
+        self.assertTrue(stat.S_IXUSR & start.stat().st_mode)
+        start_text = start.read_text(encoding="utf-8")
+        self.assertIn("caelestia shell", start_text)
+        self.assertIn("quickshell", start_text)
+        shell_json = (
+            ROOT / "archiso/airootfs/etc/skel/.config/caelestia/shell.json"
+        ).read_text(encoding="utf-8")
+        self.assertIn('"persistent": true', shell_json)
+        installer = (
+            ROOT / "archiso/airootfs/usr/bin/synapseos-installer"
+        ).read_text(encoding="utf-8")
+        self.assertIn('XDG_CURRENT_DESKTOP:-Hyprland', installer)
+        self.assertNotIn('XDG_CURRENT_DESKTOP:-KDE', installer)
         pkgs = (ROOT / "archiso/packages.x86_64").read_text(encoding="utf-8")
         self.assertRegex(pkgs, r"(?m)^vulkan-swrast$")
         self.assertRegex(pkgs, r"(?m)^vulkan-virtio$")
         hotfix = ROOT / "tools/live-hotfix-desktop.sh"
-        self.assertIn("synapseos-session", hotfix.read_text(encoding="utf-8"))
+        hotfix_text = hotfix.read_text(encoding="utf-8")
+        self.assertIn("synapseos-session", hotfix_text)
+        self.assertIn("synapseos-start-desktop", hotfix_text)
         runner = ROOT / "tools/run-iso.sh"
         self.assertTrue(runner.is_file())
         text = runner.read_text(encoding="utf-8")

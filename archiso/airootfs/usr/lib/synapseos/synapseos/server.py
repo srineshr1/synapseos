@@ -59,10 +59,13 @@ class Core:
         config_mod.save(self.cfg)
         audit.record("pause" if paused else "resume")
 
-    def set_key(self, key: str) -> None:
-        self.cfg.model.api_key = key.strip()
+    def set_key(self, key: str, provider: str = "", base_url: str = "",
+                model: str = "") -> None:
+        from .runtime import apply_provider
+        chosen = (provider or "typesafe").strip().lower()
+        apply_provider(self.cfg, chosen, key, base_url, model)
         config_mod.save(self.cfg)
-        audit.record("key", status="set")
+        audit.record("key", status="set", provider=self.cfg.model.provider)
 
     def snapshot_text(self, limit: int = 12) -> str:
         from .perception.proc import fmt_duration
@@ -135,10 +138,18 @@ class Core:
                 return result(id_, self._status())
             if method in {"synapse/set_key", "set_key"}:
                 key = str(params.get("key") or "").strip()
-                if not key:
+                provider = str(params.get("provider") or "typesafe").strip().lower()
+                if provider != "local" and not key:
                     return error(id_, -32602, "key is required")
-                self.set_key(key)
-                return result(id_, {"ok": True, "has_key": True})
+                try:
+                    self.set_key(
+                        key, provider,
+                        str(params.get("base_url") or ""),
+                        str(params.get("model") or ""),
+                    )
+                except ValueError as exc:
+                    return error(id_, -32602, str(exc))
+                return result(id_, self._status())
             if method in {"synapse/transcribe", "transcribe"}:
                 return result(id_, self._transcribe(params))
             if method in {"synapse/audit", "audit"}:
@@ -154,11 +165,17 @@ class Core:
             return error(id_, -32603, f"{type(exc).__name__}: {exc}")
 
     def _status(self) -> dict[str, Any]:
+        from .runtime import resolve
+        route = resolve(self.cfg)
         st = self.policy.status()
         st["ok"] = True
         st["version"] = __version__
         st["has_key"] = self.cfg.has_key()
-        st["model"] = self.cfg.model.model
+        st["ready"] = route.kind in {"local", "api"}
+        st["backend"] = route.kind
+        st["provider"] = route.provider or self.cfg.model.provider
+        st["model"] = route.model or self.cfg.model.model
+        st["capable"] = route.capable
         st["apps"] = len(self.sampler.grouped())
         st["pid"] = os.getpid()
         return st

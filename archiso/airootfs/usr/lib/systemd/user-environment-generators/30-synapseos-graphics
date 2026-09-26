@@ -7,7 +7,12 @@ for _synapseos_v in \
     WLR_RENDERER \
     AQ_NO_MODIFIERS \
     QT_QUICK_BACKEND \
-    QSG_RHI_BACKEND
+    QSG_RHI_BACKEND \
+    QSG_RENDER_LOOP \
+    LIBGL_ALWAYS_SOFTWARE \
+    GALLIUM_DRIVER \
+    VK_ICD_FILENAMES \
+    SYNAPSEOS_VM
 do
     eval "_synapseos_val=\${${_synapseos_v}-}"
     if [ -n "${_synapseos_val}" ]; then
